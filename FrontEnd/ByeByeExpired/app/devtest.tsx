@@ -46,6 +46,14 @@ export default function DevTestScreen() {
             onPress={() => router.push('/scanBarcode')} 
           />
         </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Register" 
+            color="purple" 
+            onPress={() => router.push('/Register')} 
+          />
+        </View>
       </View>
     </ScrollView>
   );

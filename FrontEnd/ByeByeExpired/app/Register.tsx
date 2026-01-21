@@ -1,0 +1,298 @@
+import React, { useEffect, useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform, ScrollView, Image } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+// Component หลักสำหรับหน้าลงทะเบียนสมาชิก
+const RegisterScreen = () => {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Function จัดการการลงทะเบียนผู้ใช้งาน - ตรวจสอบข้อมูล สร้าง userId และบันทึกลง AsyncStorage
+  const handleRegister = async () => {
+
+    if (!fullName || !email || !password || !confirmPassword) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+  
+
+    if (!email.includes("@")) {
+      Alert.alert("Error", "Please enter a valid email address");
+      return;
+    }
+  
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+  
+
+    const userId = Math.floor(Math.random() * 10000) + 1;
+    
+    const userData = {
+      id: userId,
+      fullName: fullName,
+      email: email,
+      password: password,
+    };
+
+    try {
+
+      const existingUsers = await AsyncStorage.getItem("registered_users");
+      const users = existingUsers ? JSON.parse(existingUsers) : [];
+      
+      const emailExists = users.find((user: any) => user.email === email);
+      
+      if (emailExists) {
+        Alert.alert(
+          "Error",
+          "Email is already registered!",
+          [
+            {
+              text: "Try Again",
+              onPress: () => {
+                setFullName('');
+                setEmail('');
+                setPassword('');
+                setConfirmPassword('');
+              },
+            },
+            { text: "Login", onPress: () => router.push("/login") },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+
+
+      users.push(userData);
+      await AsyncStorage.setItem("registered_users", JSON.stringify(users));
+      await AsyncStorage.setItem("user_id", userId.toString());
+
+
+      Alert.alert(
+        "Success",
+        `Registration successful!\nYour User ID: ${userId}`,
+        [{ text: "OK", onPress: () => router.push("/login") }]
+      );
+
+    } catch (error) {
+      console.error("Error during registration:", error);
+      Alert.alert("Error", "An error occurred. Please try again later.");
+    }
+  };
+
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  // Function จัดการเมื่อ keyboard แสดงขึ้น - อัปเดต state เพื่อปรับ UI
+  const handleKeyboardShow = (event: any) => {
+    setIsKeyboardVisible(true);
+  };
+
+  // Function จัดการเมื่อ keyboard ซ่อน - อัปเดต state เพื่อปรับ UI กลับสู่ปกติ
+  const handleKeyboardHide = (event: any) => {
+    setIsKeyboardVisible(false);
+  };
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener("keyboardDidShow", handleKeyboardShow);
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", handleKeyboardHide);
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined} 
+        keyboardVerticalOffset={100}
+      >
+        <ImageBackground source={require("../assets/images/background.jpg")} style={styles.container}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+          <View style={styles.formContainer}>
+            <ScrollView 
+              contentContainerStyle={styles.scrollContainer}
+            >
+              <Text style={styles.headerText}>Create account</Text>
+              
+              {/* Google Login Button */}
+              <TouchableOpacity style={styles.googleButton} onPress={() => Alert.alert('Google Login', 'Google login coming soon!')}>
+                <Image 
+                  source={require('../assets/images/google.png')} 
+                  style={styles.googleIcon}
+                />
+                <Text style={styles.googleButtonText}>Login with Google</Text>
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <Text style={styles.label}>Full name</Text>
+              <TextInput
+                style={styles.input}
+                value={fullName}
+                onChangeText={setFullName}
+              />
+              <Text style={styles.label}>Email address</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+              />
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+              <Text style={styles.label}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+              <TouchableOpacity style={styles.button} onPress={handleRegister}>
+                <Text style={styles.buttonText}>Sign Up</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </ImageBackground>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    padding: 20,
+  },
+  backButton: {
+    position: "absolute",
+    top: 30,  
+    left: 10, 
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    padding: 8,
+    borderRadius: 15,
+  },
+  backButtonText: {
+    fontSize: 14,
+    color: "#6a367a", 
+  },
+  formContainer: {
+    width: "100%",
+    backgroundColor: "transparent",
+    padding: 20,
+    borderRadius: 80,
+    marginTop: 280,
+    paddingBottom: 30,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: "700",
+    textAlign: "center",
+    color: "#aa64aa",
+    marginBottom: 20,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  googleIcon: {
+    width: 18,
+    height: 18,
+    marginRight: 10,
+    resizeMode: 'contain',
+  },
+  googleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(106, 54, 122, 0.3)',
+  },
+  dividerText: {
+    paddingHorizontal: 15,
+    fontSize: 18,
+    color: '#6a367a',
+    fontWeight: '600',
+  },
+  label: {
+    fontSize: 14,
+    color: "#a64ca6",
+    marginBottom: 5,
+  },
+  input: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#e8b4e8",
+  },
+  button: {
+    backgroundColor: "#ffe9f2",
+    paddingVertical: 16,
+    paddingHorizontal: 80,
+    borderRadius: 50,
+    alignItems: "center",
+    marginTop: 30,
+    shadowColor: "#a85a9a",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  buttonText: {
+    color: "#6a367a",
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+});
+
+export default RegisterScreen;
