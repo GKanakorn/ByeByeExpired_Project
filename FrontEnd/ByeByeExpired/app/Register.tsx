@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform, ScrollView, Image } from "react-native";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../src/supabase';
+import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+WebBrowser.maybeCompleteAuthSession();
 
 // Component หลักสำหรับหน้าลงทะเบียนสมาชิก
 const RegisterScreen = () => {
@@ -11,79 +14,61 @@ const RegisterScreen = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Function จัดการการลงทะเบียนผู้ใช้งาน - ตรวจสอบข้อมูล สร้าง userId และบันทึกลง AsyncStorage
   const handleRegister = async () => {
-
     if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
-  
 
     if (!email.includes("@")) {
       Alert.alert("Error", "Please enter a valid email address");
       return;
     }
-  
 
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
       return;
     }
-  
 
-    const userId = Math.floor(Math.random() * 10000) + 1;
-    
-    const userData = {
-      id: userId,
-      fullName: fullName,
-      email: email,
-      password: password,
-    };
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
 
-    try {
+    if (error) {
+      Alert.alert("Register failed", error.message);
+      return;
+    }
 
-      const existingUsers = await AsyncStorage.getItem("registered_users");
-      const users = existingUsers ? JSON.parse(existingUsers) : [];
-      
-      const emailExists = users.find((user: any) => user.email === email);
-      
-      if (emailExists) {
-        Alert.alert(
-          "Error",
-          "Email is already registered!",
-          [
-            {
-              text: "Try Again",
-              onPress: () => {
-                setFullName('');
-                setEmail('');
-                setPassword('');
-                setConfirmPassword('');
-              },
-            },
-            { text: "Login", onPress: () => router.push("/login") },
-          ],
-          { cancelable: false }
-        );
-        return;
-      }
+    Alert.alert(
+      "Success",
+      "Registration successful! Please check your email to confirm.",
+      [{ text: "OK", onPress: () => router.push("/login") }]
+    );
+  };
+  const handleGoogleLogin = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'byebyeexpired://login-callback',
+      },
+    });
 
+    if (error) {
+      Alert.alert('Google Login Error', error.message);
+      return;
+    }
 
-      users.push(userData);
-      await AsyncStorage.setItem("registered_users", JSON.stringify(users));
-      await AsyncStorage.setItem("user_id", userId.toString());
-
-
-      Alert.alert(
-        "Success",
-        `Registration successful!\nYour User ID: ${userId}`,
-        [{ text: "OK", onPress: () => router.push("/login") }]
+    if (data?.url) {
+      await WebBrowser.openAuthSessionAsync(
+        data.url,
+        'byebyeexpired://login-callback'
       );
-
-    } catch (error) {
-      console.error("Error during registration:", error);
-      Alert.alert("Error", "An error occurred. Please try again later.");
     }
   };
 
@@ -127,7 +112,7 @@ const RegisterScreen = () => {
               <Text style={styles.headerText}>Create account</Text>
               
               {/* Google Login Button */}
-              <TouchableOpacity style={styles.googleButton} onPress={() => Alert.alert('Google Login', 'Google login coming soon!')}>
+              <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
                 <Image 
                   source={require('../assets/images/google.png')} 
                   style={styles.googleIcon}
