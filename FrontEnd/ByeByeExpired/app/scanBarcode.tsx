@@ -7,7 +7,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ScanBarcodeScreen() {
   const router = useRouter();
-  const [isScanning, setIsScanning] = useState(false);
   const [scanLineAnimation] = useState(new Animated.Value(0));
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -43,20 +42,27 @@ export default function ScanBarcodeScreen() {
   }, []);
 
   const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
-    if (data && isScanning) {
-      setIsScanning(false);
+    if (data) {
       setScannedData(data);
       Alert.alert('สำเร็จ!', `สแกนสำเร็จ!\n\nข้อมูล: ${data}`);
     }
   };
 
+  const handleAddProduct = () => {
+    // Navigate to add product page with scanned data (if any)
+    router.push({
+      pathname: '/addProduct',
+      params: scannedData ? { barcode: scannedData } : {}
+    });
+  };
+
   return (
     <View style={styles.fullScreenContainer}>
-      {/* Camera View */}
+      {/* Camera View - สแกนตลอดเวลา */}
       <CameraView
         style={styles.camera}
         facing='back'
-        onBarcodeScanned={isScanning ? handleBarcodeScanned : undefined}
+        onBarcodeScanned={handleBarcodeScanned}
       />
       
       {/* Dark Overlay with Scanning Window */}
@@ -128,23 +134,21 @@ export default function ScanBarcodeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.scanButton, isScanning && styles.scanButtonActive]}
-            onPress={() => setIsScanning(!isScanning)}
+            style={styles.scanButton}
+            onPress={handleAddProduct}
           >
             <LinearGradient
-              colors={isScanning ? ['#6C63FF', '#5A52E8'] : ['#9B59B6', '#8E44AD']}
+              colors={['#9B59B6', '#8E44AD']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.gradientButton}
             >
               <Ionicons 
-                name={isScanning ? "stop-circle-outline" : "scan-outline"} 
+                name="add-circle-outline" 
                 size={20} 
                 color="white" 
               />
-              <Text style={styles.buttonText}>
-                {isScanning ? 'หยุดสแกน' : 'เริ่มสแกน'}
-              </Text>
+              <Text style={styles.buttonText}>เพิ่ม</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -272,10 +276,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8
-  },
-  scanButtonActive: {
-    shadowColor: '#6C63FF',
-    shadowOpacity: 0.6
   },
   gradientButton: {
     paddingHorizontal: 24,
