@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../src/supabase';
 import { 
   View, 
   Text, 
@@ -39,15 +40,39 @@ export default function AddStorageScreen() {
   const [selectedIcon, setSelectedIcon] = useState('fridge');
   const [selectedColor, setSelectedColor] = useState('#FFEBCD');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!storageName.trim()) {
       Alert.alert('Error', 'Please enter a storage name');
       return;
     }
-    
-    // Here you would typically save to your backend/database
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.user) {
+      Alert.alert('Error', 'User not logged in');
+      return;
+    }
+
+    const { error } = await supabase.from('storages').insert([
+      {
+        name: storageName,
+        icon: selectedIcon,
+        color: selectedColor,
+        user_id: session.user.id,
+        location_id: null,
+      },
+    ]);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+
     Alert.alert(
-      'Success', 
+      'Success',
       `Storage "${storageName}" created successfully!`,
       [{ text: 'OK', onPress: () => router.back() }]
     );
