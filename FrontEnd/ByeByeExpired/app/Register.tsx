@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, A
 import { supabase } from '../src/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -47,8 +48,16 @@ const RegisterScreen = () => {
 
     Alert.alert(
       "Success",
-      "Registration successful! Please check your email to confirm.",
-      [{ text: "OK", onPress: () => router.push("/login") }]
+      "Registration successful! กรุณายืนยันอีเมล",
+      [
+        {
+          text: "OK",
+          onPress: () => router.replace({
+            pathname: '/confirm-email',
+            params: { email },
+          })
+        },
+      ]
     );
   };
   const handleGoogleLogin = async () => {
@@ -65,10 +74,54 @@ const RegisterScreen = () => {
     }
 
     if (data?.url) {
-      await WebBrowser.openAuthSessionAsync(
+      const result = await WebBrowser.openAuthSessionAsync(
         data.url,
         'byebyeexpired://login-callback'
       );
+      
+      if (result.type === 'success' && result.url) {
+        console.log('[OAUTH] redirect url:', result.url);
+
+        // 🔥 ดึง fragment หลัง #
+        const fragment = result.url.split('#')[1];
+
+        if (!fragment) {
+          Alert.alert('Auth Error', 'ไม่พบ fragment จาก OAuth');
+          return;
+        }
+
+        const params = new URLSearchParams(fragment);
+
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+
+        if (!access_token || !refresh_token) {
+          Alert.alert('Auth Error', 'ไม่พบ token จาก OAuth');
+          return;
+        }
+
+        // 🔥 set session ให้ Supabase
+        const { data, error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
+        });
+
+        if (error) {
+          Alert.alert('Session Error', error.message);
+          return;
+        }
+
+        const user = data.user;
+
+        if (!user) {
+          Alert.alert('Error', 'ไม่พบ user หลัง set session');
+          return;
+        }
+
+        console.log('[LOGIN SUCCESS] UID:', user.id);
+
+        router.replace('/devtest');
+      }
     }
   };
 
