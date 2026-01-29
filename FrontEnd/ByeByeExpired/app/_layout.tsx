@@ -2,6 +2,7 @@ import { Stack, router, usePathname } from 'expo-router'
 import { useEffect } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { supabase } from '../src/supabase'
+import { LocationProvider } from '../src/context/LocationContext'
 
 export default function RootLayout() {
   const pathname = usePathname()
@@ -10,7 +11,6 @@ export default function RootLayout() {
     const { data: { subscription } } =
       supabase.auth.onAuthStateChange((event, session) => {
 
-        // ❌ ไม่ทำอะไรตอน initial
         if (event === 'INITIAL_SESSION') return
 
         const user = session?.user
@@ -20,7 +20,6 @@ export default function RootLayout() {
           path: pathname,
           email: user?.email,
           confirmed: user?.email_confirmed_at,
-          providers: user?.app_metadata?.providers,
         })
 
         // ❌ ยังไม่ login
@@ -34,7 +33,7 @@ export default function RootLayout() {
         const isEmailProvider =
           user.app_metadata?.providers?.includes('email')
 
-        // ❌ สมัครด้วย email แต่ยังไม่ confirm
+        // ❌ email ยังไม่ confirm
         if (isEmailProvider && !user.email_confirmed_at) {
           if (pathname !== '/confirm-email') {
             router.replace('/confirm-email')
@@ -42,19 +41,16 @@ export default function RootLayout() {
           return
         }
 
-        // ✅ ผ่านทุกเงื่อนไข
-        if (pathname !== '/devtest') {
-          router.replace('/devtest')
-        }
+        // ✅ ผ่าน auth แล้ว → ไม่ redirect เพิ่ม
       })
 
     return () => subscription.unsubscribe()
   }, [pathname])
 
   return (
-    <>
+    <LocationProvider>
       <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style="auto" />
-    </>
+    </LocationProvider>
   )
 }

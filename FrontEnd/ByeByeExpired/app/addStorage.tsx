@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from '../src/context/LocationContext'
 import { supabase } from '../src/supabase';
 import { 
   View, 
@@ -16,8 +17,10 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { createStorage } from '../src/api/storage.api'
 
 const { width } = Dimensions.get('window');
+
 
 // Storage icons data with images
 const STORAGE_ICONS: { id: string; name: string; icon: ImageSourcePropType }[] = [
@@ -39,44 +42,37 @@ export default function AddStorageScreen() {
   const [storageName, setStorageName] = useState('Fridge 2');
   const [selectedIcon, setSelectedIcon] = useState('fridge');
   const [selectedColor, setSelectedColor] = useState('#FFEBCD');
+  const { selectedLocation } = useLocation()
 
   const handleSave = async () => {
-    if (!storageName.trim()) {
-      Alert.alert('Error', 'Please enter a storage name');
-      return;
-    }
-
     const {
       data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    } = await supabase.auth.getSession()
 
-    if (sessionError || !session?.user) {
-      Alert.alert('Error', 'User not logged in');
-      return;
+    const token = session?.access_token
+    if (!token) {
+      Alert.alert('Error', 'Not logged in')
+      return
     }
 
-    const { error } = await supabase.from('storages').insert([
-      {
+    if (!selectedLocation) {
+      Alert.alert('Error', 'Please select location first')
+      return
+    }
+
+    try {
+      await createStorage(token, selectedLocation.id, {
         name: storageName,
         icon: selectedIcon,
         color: selectedColor,
-        user_id: session.user.id,
-        location_id: null,
-      },
-    ]);
+      })
 
-    if (error) {
-      Alert.alert('Error', error.message);
-      return;
+      Alert.alert('Success', 'Storage created')
+      router.back()
+    } catch (err: any) {
+      Alert.alert('Error', err.message)
     }
-
-    Alert.alert(
-      'Success',
-      `Storage "${storageName}" created successfully!`,
-      [{ text: 'OK', onPress: () => router.back() }]
-    );
-  };
+  }
 
   const handleCancel = () => {
     router.back();

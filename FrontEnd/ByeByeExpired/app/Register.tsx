@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, A
 import { supabase } from '../src/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
+import { register } from '../src/api/auth.api'
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -16,35 +17,27 @@ const RegisterScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
-    }
+  if (!fullName || !email || !password || !confirmPassword) {
+    Alert.alert("Error", "Please fill in all fields")
+    return
+  }
 
-    if (!email.includes("@")) {
-      Alert.alert("Error", "Please enter a valid email address");
-      return;
-    }
+  if (!email.includes("@")) {
+    Alert.alert("Error", "Please enter a valid email address")
+    return
+  }
 
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
+  if (password !== confirmPassword) {
+    Alert.alert("Error", "Passwords do not match")
+    return
+  }
 
-    const { error } = await supabase.auth.signUp({
+  try {
+    await register({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-
-    if (error) {
-      Alert.alert("Register failed", error.message);
-      return;
-    }
+      fullName,
+    })
 
     Alert.alert(
       "Success",
@@ -52,14 +45,18 @@ const RegisterScreen = () => {
       [
         {
           text: "OK",
-          onPress: () => router.replace({
-            pathname: '/confirm-email',
-            params: { email },
-          })
+          onPress: () =>
+            router.replace({
+              pathname: "/confirm-email",
+              params: { email },
+            }),
         },
       ]
-    );
-  };
+    )
+  } catch (err: any) {
+    Alert.alert("Register failed", err.message)
+  }
+}
   const handleGoogleLogin = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

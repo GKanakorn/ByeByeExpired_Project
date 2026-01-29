@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@types/react": "~19.1.10",
-    "expo": "^54.0.31",
-    "expo-router": "^6.0.22",
-    "typescript": "~5.9.2"
-  }
-}
