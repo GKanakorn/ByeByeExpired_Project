@@ -2,11 +2,13 @@ import express from 'express'
 import authRoute from './routes/auth.route'
 import storageRoute from './routes/storage.route'
 import locationRoute from './routes/location.route'
+import healthRoute from './routes/health.route'
 
 const app = express()
 app.use(express.json())
 
 app.use('/auth', authRoute)
+app.use('/health', healthRoute)
 app.use('/api', locationRoute)
 app.use('/api', storageRoute)
 
