@@ -1,14 +1,8 @@
-<<<<<<< HEAD
 import { Stack, router, usePathname } from 'expo-router'
 import { useEffect } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { supabase } from '../src/supabase'
 import { LocationProvider } from '../src/context/LocationContext'
-=======
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
->>>>>>> cbb59a36f90afa60e79e3f51b0fa7ddeb07e7674
 
 export default function RootLayout() {
   const pathname = usePathname()
@@ -54,17 +48,9 @@ export default function RootLayout() {
   }, [pathname])
 
   return (
-<<<<<<< HEAD
     <LocationProvider>
       <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style="auto" />
     </LocationProvider>
   )
-=======
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="auto" />
-    </GestureHandlerRootView>
-  );
->>>>>>> cbb59a36f90afa60e79e3f51b0fa7ddeb07e7674
 }
