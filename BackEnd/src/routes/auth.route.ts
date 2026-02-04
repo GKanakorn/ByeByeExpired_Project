@@ -1,6 +1,6 @@
 // BackEnd/src/services/auth.route.ts
 import { Router } from 'express'
-import { register } from '../services/auth.service'
+import { register, login  } from '../services/auth.service'
 
 const router = Router()
 
@@ -21,6 +21,24 @@ router.post('/register', async (req, res) => {
   } catch (err: any) {
     res.status(400).json({
       message: err.message || 'Register failed',
+    })
+  }
+})
+
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Missing email or password' })
+    }
+
+    const result = await login({ email, password })
+
+    res.json(result)
+  } catch (err: any) {
+    res.status(401).json({
+      message: err.message || 'Login failed',
     })
   }
 })

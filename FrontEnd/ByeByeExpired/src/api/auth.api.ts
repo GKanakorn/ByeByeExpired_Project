@@ -28,3 +28,31 @@ export async function register(payload: {
 
   return data
 }
+
+export async function login(payload: {
+  email: string
+  password: string
+}) {
+  const res = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const text = await res.text()
+  let data: any
+
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || 'Login failed')
+  }
+
+  return data
+}

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform, Image } from "react-native";
+import { login } from '../src/api/auth.api'
+import { supabase } from '../src/supabase'
 import { useRouter } from 'expo-router';
 
 export default function LoginScreen() {
@@ -8,23 +10,21 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
 
   // ฟังก์ชันสำหรับการ Login
-  const handleLogin = () => {
-    // ตรวจสอบว่า email และ password ไม่เป็นค่าว่างเปล่า
-    if (!email || !password) {
-      Alert.alert("Error", "Please fill in your full email and password.");
-      return;
-    }
+  const handleLogin = async () => {
+    try {
+      const data = await login({ email, password })
 
-    // ตรวจสอบว่า email มี @ symbol
-    if (!email.includes("@")) {
-      Alert.alert("Error", "Please enter a valid email address.");
-      return;
-    }
+      // เอา token ไป set ให้ supabase client
+      await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      })
 
-    // Login สำเร็จ (ตอนนี้ยังไม่ต่อ backend)
-    Alert.alert("Success", "Login successful!");
-    router.push("/overview");
-  };
+      router.replace('/devtest')
+    } catch (err: any) {
+      Alert.alert('Login failed', err.message)
+    }
+  }
 
   // State สำหรับตรวจสอบว่าคีย์บอร์ดแสดงอยู่หรือไม่
   const [isKeyboardVisible , setIsKeyboardVisible] = useState(false);
