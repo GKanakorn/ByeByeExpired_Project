@@ -1,3 +1,4 @@
+// Login Screen - หน้าเข้าสู่ระบบ
 import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform, Image } from "react-native";
 import { login } from '../src/api/auth.api'
