@@ -128,6 +128,14 @@ export default function DevTestScreen() {
             onPress={() => router.push('/Register')} 
           />
         </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Settings" 
+            color="purple" 
+            onPress={() => router.push('/setting')} 
+          />
+        </View>
       </View>
     </ScrollView>
   );
