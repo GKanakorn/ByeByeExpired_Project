@@ -15,6 +15,19 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+
+interface Option {
+  label: string;
+  value: string;
+}
+
+interface DropdownProps {
+  label: string;
+  value: string;
+  options: Option[];
+  onSelect: (value: string) => void;
+  type: string;
+}
  
 export default function AddProductScreen() {
   const router = useRouter();
@@ -35,12 +48,12 @@ export default function AddProductScreen() {
   const [lowStock, setLowStock] = useState(true);
  
   // 🔽 เพิ่ม state สำหรับ dropdown
-  const [openDropdown, setOpenDropdown] = useState(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
  
   // 🔽 Custom Dropdown
-  const Dropdown = ({ label, value, options, onSelect, type }) => {
+  const Dropdown = ({ label, value, options, onSelect, type }: DropdownProps) => {
     const selectedLabel =
-      options.find(o => o.value === value)?.label || label;
+      options.find((o: Option) => o.value === value)?.label || label;
  
     return (
       <>
@@ -81,7 +94,7 @@ export default function AddProductScreen() {
             onPress={() => setOpenDropdown(null)}
           >
             <View style={styles.dropdownModal}>
-              {options.map(item => (
+              {options.map((item: Option) => (
                 <TouchableOpacity
                   key={item.value}
                   style={[
@@ -233,7 +246,9 @@ export default function AddProductScreen() {
               value={tempDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-              onChange={(e, d) => d && setTempDate(d)}
+              onChange={(e: any, d?: Date) => {
+                if (d) setTempDate(d);
+              }}
             />
  
             <View style={styles.calendarActions}>

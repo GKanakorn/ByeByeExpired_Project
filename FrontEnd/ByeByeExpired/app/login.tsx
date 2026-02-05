@@ -4,6 +4,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, A
 import { login } from '../src/api/auth.api'
 import { supabase } from '../src/supabase'
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser'
+import * as Linking from 'expo-linking'
+
+WebBrowser.maybeCompleteAuthSession()
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -26,6 +30,71 @@ export default function LoginScreen() {
       Alert.alert('Login failed', err.message)
     }
   }
+
+  const handleGoogleLogin = async () => {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'byebyeexpired://login-callback',
+        },
+      });
+  
+      if (error) {
+        Alert.alert('Google Login Error', error.message);
+        return;
+      }
+  
+      if (data?.url) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          'byebyeexpired://login-callback'
+        );
+        
+        if (result.type === 'success' && result.url) {
+          console.log('[OAUTH] redirect url:', result.url);
+  
+          // 🔥 ดึง fragment หลัง #
+          const fragment = result.url.split('#')[1];
+  
+          if (!fragment) {
+            Alert.alert('Auth Error', 'ไม่พบ fragment จาก OAuth');
+            return;
+          }
+  
+          const params = new URLSearchParams(fragment);
+  
+          const access_token = params.get('access_token');
+          const refresh_token = params.get('refresh_token');
+  
+          if (!access_token || !refresh_token) {
+            Alert.alert('Auth Error', 'ไม่พบ token จาก OAuth');
+            return;
+          }
+  
+          // 🔥 set session ให้ Supabase
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+  
+          if (error) {
+            Alert.alert('Session Error', error.message);
+            return;
+          }
+  
+          const user = data.user;
+  
+          if (!user) {
+            Alert.alert('Error', 'ไม่พบ user หลัง set session');
+            return;
+          }
+  
+          console.log('[LOGIN SUCCESS] UID:', user.id);
+  
+          router.replace('/devtest');
+        }
+      }
+    };
 
   // State สำหรับตรวจสอบว่าคีย์บอร์ดแสดงอยู่หรือไม่
   const [isKeyboardVisible , setIsKeyboardVisible] = useState(false);
@@ -67,7 +136,7 @@ export default function LoginScreen() {
           {/* Form สำหรับกรอกข้อมูล Login */}
           <View style={styles.formContainer}>
             {/* Google Login Button */}
-            <TouchableOpacity style={styles.googleButton} onPress={() => Alert.alert('Google Login', 'Google login coming soon!')}>
+            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
               <Image 
                 source={require('../assets/images/google.png')} 
                 style={styles.googleIcon}
