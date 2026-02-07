@@ -1,5 +1,5 @@
 // BackEnd/src/services/auth.service.ts
-import { supabaseAnon } from '../supabase'
+import { supabaseAnon, supabaseAdmin } from '../supabase'
 
 export async function register({
   email,

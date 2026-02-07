@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Camera, CameraView } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router'
 
 export default function ScanBarcodeScreen() {
   const router = useRouter();
   const [scanLineAnimation] = useState(new Animated.Value(0));
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const { mode } = useLocalSearchParams<{ mode: 'add' | 'remove' }>()
 
   useEffect(() => {
     async function getCameraPermissions() {
