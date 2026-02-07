@@ -25,3 +25,34 @@ export async function createLocation(userId: string, data: {
 
   return location
 }
+
+export async function deleteLocation(
+  userId: string,
+  locationId: string
+) {
+  // 1. ลบสมาชิกก่อน (กัน FK error)
+  await supabaseAdmin
+    .from('location_members')
+    .delete()
+    .eq('location_id', locationId)
+
+  // 2. ลบ location (เฉพาะ owner)
+  const { error } = await supabaseAdmin
+    .from('locations')
+    .delete()
+    .eq('id', locationId)
+    .eq('owner_id', userId)
+
+  if (error) throw error
+
+  return { success: true }
+}
+export async function getMyLocations(userId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('locations')
+    .select('id, name, type') // ⭐ ต้องมี type
+    .eq('owner_id', userId)
+
+  if (error) throw error
+  return data
+}

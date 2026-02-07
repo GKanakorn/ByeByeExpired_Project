@@ -42,7 +42,7 @@ export default function AddStorageScreen() {
   const [storageName, setStorageName] = useState('Fridge 2');
   const [selectedIcon, setSelectedIcon] = useState('fridge');
   const [selectedColor, setSelectedColor] = useState('#FFEBCD');
-  const { selectedLocation } = useLocation()
+  const { currentLocation } = useLocation()
 
   const handleSave = async () => {
     const {
@@ -55,13 +55,13 @@ export default function AddStorageScreen() {
       return
     }
 
-    if (!selectedLocation) {
+    if (!currentLocation) {
       Alert.alert('Error', 'Please select location first')
       return
     }
 
     try {
-      await createStorage(token, selectedLocation.id, {
+      await createStorage(token, currentLocation.id, {
         name: storageName,
         icon: selectedIcon,
         color: selectedColor,

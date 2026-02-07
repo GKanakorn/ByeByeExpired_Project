@@ -36,3 +36,24 @@ export async function createStorage(
 
   return data
 }
+
+export async function getStoragesByLocation(
+  token: string,
+  locationId: string
+) {
+  const res = await fetch(
+    `${API_URL}/api/locations/${locationId}/storages`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data?.message || "Fetch storages failed")
+  }
+
+  return data
+}
