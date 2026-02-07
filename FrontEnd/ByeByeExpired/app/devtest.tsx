@@ -83,6 +83,15 @@ export default function DevTestScreen() {
             onPress={() => router.push('/overview')} 
           />
         </View>
+      </View>
+
+      <View style={styles.buttonGroup}>
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Overview Business" 
+            onPress={() => router.push('/overviewBusiness')} 
+          />
+        </View>
 
         <View style={styles.buttonWrapper}>
           <Button 

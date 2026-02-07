@@ -45,6 +45,7 @@ export default function OverviewScreen() {
             <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
               <Ionicons name="chevron-back" size={22} color="#FF6EC7" />
             </TouchableOpacity>
+          
 
             <View style={styles.dateBox}>
               <Ionicons name="home" size={18} color="#FF6EC7" />
