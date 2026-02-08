@@ -72,7 +72,11 @@ export default function PersonalOverview({ location }: { location: Location }) {
                     {/* ซ้าย */}
                     <View style={{ flexDirection: "row", alignItems: "center" }}>
                         <View style={styles.dateBox}>
-                            <Ionicons name="home" size={18} color="#FF6EC7" />
+                            <Image
+                                source={require("../assets/images/home.png")}
+                                style={styles.headerIcon}
+                                resizeMode="contain"
+                            />
                             <Text style={styles.dateText}>{location.name}</Text>
                             <Text style={styles.dateText}>{formattedDate}</Text>
                         </View>
@@ -340,12 +344,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
         paddingTop: 50, // เว้นระยะจากขอบบน
-        marginBottom: 10,
-    },
-    backBtn: {
-        backgroundColor: "#FFE4F2",
-        padding: 6,
-        borderRadius: 20,
+        marginBottom: 2,
     },
     dateBox: {
         flexDirection: "row",
@@ -354,7 +353,6 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 20,
-        marginLeft: 20,
     },
     dateText: {
         marginLeft: 6,
@@ -589,4 +587,9 @@ const styles = StyleSheet.create({
         width: 26,
         height: 26,
     },
+
+    headerIcon: {
+        width: 27,
+        height: 27,
+    }
 });
