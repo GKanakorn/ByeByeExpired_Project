@@ -53,7 +53,7 @@ export default function ScanBarcodeScreen() {
   const handleAddProduct = () => {
     // Navigate to add product page with scanned data (if any)
     router.push({
-      pathname: '/addProduct',
+      pathname: '/addProductBusiness',
       params: scannedData ? { barcode: scannedData } : {}
     });
   };
