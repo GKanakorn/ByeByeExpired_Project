@@ -19,19 +19,27 @@ export default function DevTestScreen() {
       </View>
 
       <View style={styles.buttonGroup}>
-        <View style={styles.buttonWrapper}>
-          <Button 
-            title="ไปหน้า Overview Business" 
-            onPress={() => router.push('/overviewBusiness')} 
-          />
-        </View>
 
-        <View style={styles.buttonWrapper}>
-          <Button 
-            title="ไปหน้า Add Product" 
-            onPress={() => router.push('/addProduct')} 
-          />
-        </View>
+      <View style={styles.buttonWrapper}>
+        <Button
+          title="ไปหน้า Add Product for Business"
+          onPress={() => router.push('/addProductBusiness')}
+        />
+      </View>
+
+      <View style={styles.buttonWrapper}>
+        <Button
+          title="ไปหน้า Add Product for Personal"
+          onPress={() => router.push('/addProductPersonal')}
+        />
+      </View>
+      <View style={styles.buttonWrapper}>
+        <Button
+          title="ไปหน้า Delete Product"
+          color="red" // เปลี่ยนสีหน่อยให้รู้ว่าเป็นปุ่มลบ
+          onPress={() => router.push('/deleteProduct')}
+        />
+      </View>
 
         <View style={styles.buttonWrapper}>
           <Button 
