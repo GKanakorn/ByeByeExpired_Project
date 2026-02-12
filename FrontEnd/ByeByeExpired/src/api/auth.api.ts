@@ -1,4 +1,6 @@
 import { API_URL } from '../config/api'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
 
 export async function register(payload: {
   email: string
@@ -55,4 +57,14 @@ export async function login(payload: {
   }
 
   return data
+}
+
+export async function getAuthToken(): Promise<string> {
+  const token = await AsyncStorage.getItem('token')
+
+  if (!token) {
+    throw new Error('No auth token found')
+  }
+
+  return token
 }

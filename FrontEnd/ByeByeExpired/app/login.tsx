@@ -5,7 +5,7 @@ import { login } from '../src/api/auth.api'
 import { supabase } from '../src/supabase'
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser'
-import * as Linking from 'expo-linking'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -19,7 +19,10 @@ export default function LoginScreen() {
     try {
       const data = await login({ email, password })
 
-      // เอา token ไป set ให้ supabase client
+      // ✅ เก็บ token สำหรับ backend API
+      await AsyncStorage.setItem('token', data.access_token)
+
+      // ✅ set session ให้ Supabase (ไว้ใช้ OAuth / RLS / storage)
       await supabase.auth.setSession({
         access_token: data.access_token,
         refresh_token: data.refresh_token,
@@ -32,72 +35,72 @@ export default function LoginScreen() {
   }
 
   const handleGoogleLogin = async () => {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: 'byebyeexpired://login-callback',
-        },
-      });
-  
-      if (error) {
-        Alert.alert('Google Login Error', error.message);
-        return;
-      }
-  
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          'byebyeexpired://login-callback'
-        );
-        
-        if (result.type === 'success' && result.url) {
-          console.log('[OAUTH] redirect url:', result.url);
-  
-          // 🔥 ดึง fragment หลัง #
-          const fragment = result.url.split('#')[1];
-  
-          if (!fragment) {
-            Alert.alert('Auth Error', 'ไม่พบ fragment จาก OAuth');
-            return;
-          }
-  
-          const params = new URLSearchParams(fragment);
-  
-          const access_token = params.get('access_token');
-          const refresh_token = params.get('refresh_token');
-  
-          if (!access_token || !refresh_token) {
-            Alert.alert('Auth Error', 'ไม่พบ token จาก OAuth');
-            return;
-          }
-  
-          // 🔥 set session ให้ Supabase
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-  
-          if (error) {
-            Alert.alert('Session Error', error.message);
-            return;
-          }
-  
-          const user = data.user;
-  
-          if (!user) {
-            Alert.alert('Error', 'ไม่พบ user หลัง set session');
-            return;
-          }
-  
-          console.log('[LOGIN SUCCESS] UID:', user.id);
-  
-          router.replace('/devtest');
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'byebyeexpired://login-callback',
+      },
+    });
+
+    if (error) {
+      Alert.alert('Google Login Error', error.message);
+      return;
+    }
+
+    if (data?.url) {
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        'byebyeexpired://login-callback'
+      );
+
+      if (result.type === 'success' && result.url) {
+        console.log('[OAUTH] redirect url:', result.url);
+
+        // 🔥 ดึง fragment หลัง #
+        const fragment = result.url.split('#')[1];
+
+        if (!fragment) {
+          Alert.alert('Auth Error', 'ไม่พบ fragment จาก OAuth');
+          return;
         }
+
+        const params = new URLSearchParams(fragment);
+
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+
+        if (!access_token || !refresh_token) {
+          Alert.alert('Auth Error', 'ไม่พบ token จาก OAuth');
+          return;
+        }
+
+        // 🔥 set session ให้ Supabase
+        const { data, error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
+        });
+
+        if (error) {
+          Alert.alert('Session Error', error.message);
+          return;
+        }
+
+        const user = data.user;
+
+        if (!user) {
+          Alert.alert('Error', 'ไม่พบ user หลัง set session');
+          return;
+        }
+
+        console.log('[LOGIN SUCCESS] UID:', user.id);
+
+        router.replace('/devtest');
       }
-    };
+    }
+  };
 
   // State สำหรับตรวจสอบว่าคีย์บอร์ดแสดงอยู่หรือไม่
-  const [isKeyboardVisible , setIsKeyboardVisible] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // ฟังก์ชันเมื่อคีย์บอร์ดแสดง
   const handleKeyboardShow = () => {
@@ -137,8 +140,8 @@ export default function LoginScreen() {
           <View style={styles.formContainer}>
             {/* Google Login Button */}
             <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
-              <Image 
-                source={require('../assets/images/google.png')} 
+              <Image
+                source={require('../assets/images/google.png')}
                 style={styles.googleIcon}
               />
               <Text style={styles.googleButtonText}>Login with Google</Text>
@@ -159,7 +162,7 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
             />
-{/* Password */}
+            {/* Password */}
             <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}

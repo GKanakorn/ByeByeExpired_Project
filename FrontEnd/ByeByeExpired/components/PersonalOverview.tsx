@@ -279,34 +279,43 @@ export default function PersonalOverview({ location }: { location: Location }) {
 
 
             {showPlusMinus && (
-                <View style={styles.plusMinusContainer}>
-                    <TouchableOpacity
+                    <View style={styles.plusMinusContainer}>
+                      <TouchableOpacity
                         style={styles.minusBtn}
                         onPress={() => {
-                            setShowPlusMinus(false)
-                            router.push({
-                                pathname: '/scanBarcode',
-                                params: { mode: 'remove' },
-                            })
+                          setShowPlusMinus(false)
+                          router.replace({
+                            pathname: '/scanBarcode',
+                            params: {
+                              mode: 'remove',
+                              context: location.type,
+                              locationId: location.id,
+                            },
+                          })
                         }}
-                    >
+                      >
                         <Text style={styles.pmText}>-</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
+                      </TouchableOpacity>
+            
+                      <TouchableOpacity
                         style={styles.plusBtn}
                         onPress={() => {
-                            setShowPlusMinus(false)
-                            router.push({
-                                pathname: '/scanBarcode',
-                                params: { mode: 'add' },
-                            })
+                          setShowPlusMinus(false)
+                          router.replace({
+                            pathname: '/scanBarcode',
+                            params: {
+                              mode: 'add',
+                              context: location.type,
+                              locationId: location.id,
+                            },
+                          })
                         }}
-                    >
+                      >
                         <Text style={styles.pmText}>+</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+            
 
         </View>
     );

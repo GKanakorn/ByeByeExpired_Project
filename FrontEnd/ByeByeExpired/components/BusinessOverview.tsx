@@ -294,9 +294,13 @@ export default function BusinessOverview({ location }: { location: Location }) {
             style={styles.minusBtn}
             onPress={() => {
               setShowPlusMinus(false)
-              router.push({
+              router.replace({
                 pathname: '/scanBarcode',
-                params: { mode: 'remove' },
+                params: {
+                  mode: 'remove',
+                  context: location.type,
+                  locationId: location.id,
+                },
               })
             }}
           >
@@ -307,9 +311,13 @@ export default function BusinessOverview({ location }: { location: Location }) {
             style={styles.plusBtn}
             onPress={() => {
               setShowPlusMinus(false)
-              router.push({
+              router.replace({
                 pathname: '/scanBarcode',
-                params: { mode: 'add' },
+                params: {
+                  mode: 'add',
+                  context: location.type,
+                  locationId: location.id,
+                },
               })
             }}
           >

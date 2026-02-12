@@ -1,18 +1,53 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View, Animated, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Camera, CameraView } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router'
+import { useFocusEffect } from 'expo-router'
+import { lookupBarcode } from '../src/api/barcode.api'
 
 export default function ScanBarcodeScreen() {
   const router = useRouter();
   const [scanLineAnimation] = useState(new Animated.Value(0));
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const { mode } = useLocalSearchParams<{ mode: 'add' | 'remove' }>()
+  const [isScanned, setIsScanned] = useState(false)
+  const scannedRef = useRef(false)
+  const [loading, setLoading] = useState(false)
+  const [cameraKey, setCameraKey] = useState(0)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const {
+    mode,
+    context,
+    locationId,
+  } = useLocalSearchParams<{
+    mode: 'add' | 'remove'
+    context: 'personal' | 'business'
+    locationId: string
+  }>()
+
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 Screen focused → reset scan')
+
+      scannedRef.current = false
+      setIsScanned(false)
+      setScannedData(null)
+      setLoading(false)
+
+      setCameraKey(prev => prev + 1)
+
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
+      }
+    }, [])
+  )
   useEffect(() => {
     async function getCameraPermissions() {
       const { status } = await Camera.requestCameraPermissionsAsync();
@@ -20,7 +55,6 @@ export default function ScanBarcodeScreen() {
     }
     getCameraPermissions();
   }, []);
-
   // Scanning animation - เคลื่อนตลอดเวลา
   useEffect(() => {
     const animateScanLine = () => {
@@ -39,34 +73,89 @@ export default function ScanBarcodeScreen() {
         animateScanLine(); // เคลื่อนตลอดเวลา
       });
     };
-    
+
     animateScanLine(); // เริ่มทันที
   }, []);
 
-  const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
-    if (data) {
-      setScannedData(data);
-      Alert.alert('สำเร็จ!', `สแกนสำเร็จ!\n\nข้อมูล: ${data}`);
-    }
-  };
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    if (scannedRef.current) return
+    scannedRef.current = true
+
+    setIsScanned(true)
+    setLoading(true)
+
+    const res = await lookupBarcode(data)
+
+    // 👉 ส่งข้อมูลไปหน้า AddProduct
+    router.replace({
+      pathname:
+        context === 'business'
+          ? '/addProductBusiness'
+          : '/addProductPersonal',
+      params: {
+        barcode: data,
+        template: JSON.stringify(res.template),
+        isNew: (!res.found).toString(),
+        locationId,
+      },
+    })
+  }
 
   const handleAddProduct = () => {
-    // Navigate to add product page with scanned data (if any)
-    router.push({
-      pathname: '/addProductBusiness',
-      params: scannedData ? { barcode: scannedData } : {}
-    });
-  };
+    if (mode !== 'add') return
 
+    const target =
+      context === 'business'
+        ? '/addProductBusiness'
+        : '/addProductPersonal'
+
+    router.replace({
+      pathname: target,
+      params: {
+        barcode: scannedData ?? undefined,
+        locationId,
+      },
+    })
+  }
+
+  const handleDeleteProduct = () => {
+    if (mode !== 'remove') return
+
+    router.replace({
+      pathname: '/deleteProduct',
+      params: {
+        barcode: scannedData ?? undefined,
+        locationId,
+        context, // 👈 personal | business
+      },
+    })
+  }
+  if (hasPermission === null) {
+    return (
+      <View style={styles.fullScreenContainer}>
+        <ActivityIndicator size="large" color="#9B59B6" />
+      </View>
+    )
+  }
+
+  if (hasPermission === false) {
+    return (
+      <View style={styles.fullScreenContainer}>
+        <Text style={{ color: 'white' }}>ไม่อนุญาตให้ใช้กล้อง</Text>
+      </View>
+    )
+  }
   return (
     <View style={styles.fullScreenContainer}>
       {/* Camera View - สแกนตลอดเวลา */}
+
       <CameraView
+        key={cameraKey}
         style={styles.camera}
-        facing='back'
-        onBarcodeScanned={handleBarcodeScanned}
+        facing="back"
+        onBarcodeScanned={isScanned ? undefined : handleBarcodeScanned}
       />
-      
+
       {/* Dark Overlay with Scanning Window */}
       <View style={styles.overlay}>
         <View style={styles.overlayTop} />
@@ -78,7 +167,7 @@ export default function ScanBarcodeScreen() {
             <View style={styles.cornerTR} />
             <View style={styles.cornerBL} />
             <View style={styles.cornerBR} />
-            
+
             {/* Animated Scan Line */}
             <Animated.View
               style={[
@@ -93,13 +182,13 @@ export default function ScanBarcodeScreen() {
                 }
               ]}
             />
-            
+
             {/* Barcode Icon */}
             <View style={styles.barcodeIcon}>
-              <Ionicons 
-                name="barcode-outline" 
-                size={28} 
-                color="#9B59B6" 
+              <Ionicons
+                name="barcode-outline"
+                size={28}
+                color="#9B59B6"
               />
             </View>
           </View>
@@ -110,50 +199,60 @@ export default function ScanBarcodeScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>สแกนโค้ด</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+        <Text style={styles.title}>
+          {mode === 'add' ? 'สแกนเพื่อเพิ่มสินค้า' : 'สแกนเพื่อลบสินค้า'}
+        </Text>
+        <TouchableOpacity style={styles.closeButton} onPress={() => router.replace('/overview')}>
           <Ionicons name="close" size={24} color="white" />
         </TouchableOpacity>
       </View>
 
       {/* Bottom Controls */}
-      <View style={styles.bottomControls}>        
+      <View style={styles.bottomControls}>
         {/* Action Buttons */}
-        <View style={styles.buttonsContainer}>
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => {/* Handle delete */}}
-          >
-            <LinearGradient
-              colors={['#FF6B6B', '#FF4757']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientButton}
-            >
-              <Ionicons name="trash-outline" size={20} color="white" />
-              <Text style={styles.buttonText}>ลบ</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+        {!isScanned && (
+          <View style={styles.buttonsContainer}>
+            {mode === 'remove' && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDeleteProduct}
+              >
+                <LinearGradient
+                  colors={['#FF6B6B', '#FF4757']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.gradientButton}
+                >
+                  <Ionicons name="trash-outline" size={20} color="white" />
+                  <Text style={styles.buttonText}>Delete</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
 
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={handleAddProduct}
-          >
-            <LinearGradient
-              colors={['#9B59B6', '#8E44AD']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientButton}
-            >
-              <Ionicons 
-                name="add-circle-outline" 
-                size={20} 
-                color="white" 
-              />
-              <Text style={styles.buttonText}>เพิ่ม</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+            {mode === 'add' && (
+              <TouchableOpacity
+                style={styles.scanButton}
+                onPress={handleAddProduct}
+              >
+                <LinearGradient
+                  colors={['#9B59B6', '#8E44AD']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.gradientButton}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color="white" />
+                  <Text style={styles.buttonText}>Add</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#9B59B6" />
+                <Text style={styles.loadingText}>กำลังตรวจสอบ Barcode…</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Instruction Text */}
         <View style={styles.instructionContainer}>
@@ -355,5 +454,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 8
-  }
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
 });
