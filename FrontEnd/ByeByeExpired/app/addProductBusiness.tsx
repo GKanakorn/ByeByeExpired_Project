@@ -7,14 +7,22 @@ import {
   TouchableOpacity,
   Switch,
   Modal,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import React from 'react'
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router'
+import { createProduct } from '../src/api/product.api';
+import * as ImagePicker from 'expo-image-picker'
+import { Image } from 'react-native'
+import { supabase } from '../src/supabase'
+import { getStoragesByLocation } from '../src/api/storage.api'
 
 interface Option {
   label: string;
@@ -28,33 +36,167 @@ interface DropdownProps {
   onSelect: (value: string) => void;
   type: string;
 }
- 
+
 export default function AddProductScreen() {
   const router = useRouter();
- 
+
+  const {
+    barcode,
+    template,
+    locationId,
+  } = useLocalSearchParams<{
+    barcode: string
+    template: string
+    locationId: string
+  }>()
+
+  const product = template
+    ? JSON.parse(template as string)
+    : null
+
+  const [name, setName] = useState('')
+  const [image, setImage] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [category, setCategory] = useState('');
   const [storage, setStorage] = useState('');
-  const [store, setStore] = useState('');
- 
+  const [storageOptions, setStorageOptions] = useState<Option[]>([])
+
   const [storageDate, setStorageDate] = useState(new Date());
   const [expireDate, setExpireDate] = useState(new Date());
- 
+
   const [tempDate, setTempDate] = useState(new Date());
- 
+
   const [showStorage, setShowStorage] = useState(false);
   const [showExpire, setShowExpire] = useState(false);
- 
-  const [expireAlert, setExpireAlert] = useState(true);
+  const [quantity, setQuantity] = useState<string>('')
+  const [notifyEnabled, setNotifyEnabled] = useState(false)
+  const [notifyDays, setNotifyDays] = useState('')
+  const [store, setStore] = useState('');
   const [lowStock, setLowStock] = useState(true);
- 
-  // 🔽 เพิ่ม state สำหรับ dropdown
+  const [expireAlert, setExpireAlert] = useState(false)
+  const [price, setPrice] = useState<string>('')
+  const [lowStockThreshold, setLowStockThreshold] = useState<string>('')
+  const [expireDays, setExpireDays] = useState<string>('')
+  const handleSave = async () => {
+    try {
+      setUploading(true)
+
+      const quantityNumber = Number(quantity)
+      const priceNumber = Number(price)
+
+      if (!quantityNumber || quantityNumber <= 0) {
+        Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
+        setUploading(false)
+        return
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        Alert.alert('Error', 'User not logged in')
+        return
+      }
+
+      await createProduct({
+        userId: user.id,
+        barcode: barcode || '',
+        templateId: null,
+        name,
+        category,
+        storage,
+        locationId,
+        storageDate,
+        expireDate,
+        quantity: quantityNumber,
+        imageUrl: image,
+        price: priceNumber || null,
+        store,
+        lowStockEnabled: lowStock,
+        notifyEnabled: expireAlert,
+        lowStockThreshold: lowStock ? Number(lowStockThreshold) : null,
+        notifyBeforeDays: expireAlert ? Number(expireDays) : null,
+      })
+
+      Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
+      router.replace('/overview')
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Save failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (product) {
+      setName(product.name ?? '')
+      setCategory(product.category ?? '')
+      setImage(product.image_url ?? null)
+    }
+  }, [])
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchStorages = async () => {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+
+          if (!session || !locationId) return
+
+          const storages = await getStoragesByLocation(
+            session.access_token,
+            locationId as string
+          )
+
+          const formatted: Option[] = [
+            ...storages.map((s: any) => ({
+              label: s.name,
+              value: s.id,
+            })),
+            {
+              label: '+ Add New Storage',
+              value: '__add_new__',
+            },
+          ]
+
+          setStorageOptions(formatted)
+        } catch (err) {
+          console.log('Fetch storages error:', err)
+        }
+      }
+
+      fetchStorages()
+    }, [locationId])
+  )
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
- 
-  // 🔽 Custom Dropdown
+  const handleCancel = () => {
+    router.replace('/overview')
+  }
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'ต้องอนุญาตเข้าถึงรูป')
+      return
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    })
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri)
+    }
+  }
   const Dropdown = ({ label, value, options, onSelect, type }: DropdownProps) => {
     const selectedLabel =
       options.find((o: Option) => o.value === value)?.label || label;
- 
+
     return (
       <>
         <TouchableOpacity
@@ -74,7 +216,7 @@ export default function AddProductScreen() {
           >
             {selectedLabel}
           </Text>
- 
+
           <Ionicons
             name="chevron-down"
             size={20}
@@ -86,7 +228,7 @@ export default function AddProductScreen() {
             }}
           />
         </TouchableOpacity>
- 
+
         <Modal transparent visible={openDropdown === type} animationType="fade">
           <TouchableOpacity
             style={styles.overlay}
@@ -102,15 +244,24 @@ export default function AddProductScreen() {
                     value === item.value && styles.dropdownItemActive
                   ]}
                   onPress={() => {
-                    onSelect(item.value);
                     setOpenDropdown(null);
+
+                    if (item.value === '__add_new__') {
+                      router.push({
+                        pathname: '/addStorage',
+                        params: { locationId },
+                      });
+                      return;
+                    }
+
+                    onSelect(item.value);
                   }}
                 >
                   <Text
                     style={[
                       styles.dropdownItemText,
                       value === item.value &&
-                        styles.dropdownItemTextActive
+                      styles.dropdownItemTextActive
                     ]}
                   >
                     {item.label}
@@ -123,30 +274,42 @@ export default function AddProductScreen() {
       </>
     );
   };
- 
+
   return (
     <LinearGradient colors={['#cbd1faff', '#eef4f8ff', '#cfe9f9ff']} style={styles.bg}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.headerBtn} onPress={() => router.back()}>
-              Cancel
-            </Text>
-            <Text style={styles.headerBtn}>Save</Text>
+            <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
+              <Text style={styles.headerBtn}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
+              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Save</Text>
+            </TouchableOpacity>
           </View>
- 
+
           <Text style={styles.headerTitle}>New Product</Text>
- 
-          <TouchableOpacity style={styles.imageBox}>
-            <Ionicons name="image-outline" size={32} color="#999" />
-            <Text style={styles.imageText}>Add Image</Text>
+
+          <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
+            {image ? (
+              <Image
+                source={{ uri: image }}
+                style={{ width: 120, height: 120, borderRadius: 8 }}
+              />
+            ) : (
+              <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
+            )}
           </TouchableOpacity>
         </View>
- 
+
         <View style={styles.card}>
           <Text style={styles.label}>Name</Text>
-          <TextInput style={styles.input} />
- 
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+          />
+
           <Text style={styles.label}>Category</Text>
           <Dropdown
             label="Select Category"
@@ -161,20 +324,16 @@ export default function AddProductScreen() {
               { label: 'Beverages', value: 'drink' }
             ]}
           />
- 
+
           <Text style={styles.label}>Storage</Text>
           <Dropdown
             label="Select Storage"
             value={storage}
             type="storage"
             onSelect={setStorage}
-            options={[
-              { label: 'Fridge', value: 'fridge' },
-              { label: 'Freezer', value: 'freezer' },
-              { label: 'Dry Food', value: 'dry' }
-            ]}
+            options={storageOptions}
           />
- 
+
           <Text style={styles.label}>Storage Date</Text>
           <TouchableOpacity
             style={styles.inputIcon}
@@ -186,7 +345,7 @@ export default function AddProductScreen() {
             <Text>{storageDate.toDateString()}</Text>
             <Ionicons name="calendar-outline" size={20} color="#888" />
           </TouchableOpacity>
- 
+
           <Text style={styles.label}>Expiration Date</Text>
           <TouchableOpacity
             style={styles.inputIcon}
@@ -198,13 +357,23 @@ export default function AddProductScreen() {
             <Text>{expireDate.toDateString()}</Text>
             <Ionicons name="calendar-outline" size={20} color="#888" />
           </TouchableOpacity>
- 
+
           <Text style={styles.label}>Quantity</Text>
-          <TextInput style={styles.input} keyboardType="numeric" />
- 
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={quantity}
+            onChangeText={setQuantity}
+          />
+
           <Text style={styles.label}>Price</Text>
-          <TextInput style={styles.input} keyboardType="numeric" />
- 
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={price}
+            onChangeText={setPrice}
+          />
+
           <Text style={styles.label}>Store</Text>
           <Dropdown
             label="Select Store"
@@ -217,21 +386,51 @@ export default function AddProductScreen() {
               { label: 'Big C', value: 'bigc' }
             ]}
           />
- 
+
           <View style={styles.switchRow}>
             <Text>Days before expiration</Text>
-            <Switch value={expireAlert} onValueChange={setExpireAlert} />
+            <Switch
+              value={expireAlert}
+              onValueChange={(value) => {
+                setExpireAlert(value)
+                if (!value) setExpireDays('')
+              }}
+            />
           </View>
-          <TextInput style={styles.input} keyboardType="numeric" />
- 
+
+          {expireAlert && (
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={expireDays}
+              onChangeText={setExpireDays}
+              placeholder="Enter days before expiration"
+            />
+          )}
+
           <View style={styles.switchRow}>
             <Text>Low Stock Alert</Text>
-            <Switch value={lowStock} onValueChange={setLowStock} />
+            <Switch
+              value={lowStock}
+              onValueChange={(value) => {
+                setLowStock(value)
+                if (!value) setLowStockThreshold('')
+              }}
+            />
           </View>
-          <TextInput style={styles.input} keyboardType="numeric" />
+
+          {lowStock && (
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={lowStockThreshold}
+              onChangeText={setLowStockThreshold}
+              placeholder="Enter low stock threshold"
+            />
+          )}
         </View>
       </ScrollView>
-    {/* ===== CALENDAR MODAL ===== */}
+      {/* ===== CALENDAR MODAL ===== */}
       <Modal transparent animationType="fade" visible={showStorage || showExpire}>
         <TouchableOpacity
           style={styles.overlay}
@@ -246,11 +445,13 @@ export default function AddProductScreen() {
               value={tempDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+              accentColor="#5B5FC7"
+              themeVariant="light"
               onChange={(e: any, d?: Date) => {
                 if (d) setTempDate(d);
               }}
             />
- 
+
             <View style={styles.calendarActions}>
               <TouchableOpacity
                 onPress={() => {
@@ -260,7 +461,7 @@ export default function AddProductScreen() {
               >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
- 
+
               <TouchableOpacity
                 onPress={() => {
                   if (showStorage) setStorageDate(tempDate);
@@ -278,21 +479,21 @@ export default function AddProductScreen() {
     </LinearGradient>
   );
 }
- 
+
 const styles = StyleSheet.create({
   bg: { flex: 1 },
- 
+
   header: {
     paddingTop: 50,
     paddingHorizontal: 24,
     paddingBottom: 20
   },
- 
+
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between'
   },
- 
+
   headerTitle: {
     marginTop: 10,
     fontSize: 22,
@@ -300,12 +501,12 @@ const styles = StyleSheet.create({
     color: '#5B5FC7',
     textAlign: 'center'
   },
- 
+
   headerBtn: {
     fontSize: 16,
     color: '#333'
   },
- 
+
   imageBox: {
     marginTop: 16,
     alignSelf: 'center',
@@ -320,13 +521,13 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4
   },
- 
+
   imageText: {
     marginTop: 6,
     fontSize: 12,
     color: '#999'
   },
- 
+
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 30,
@@ -337,19 +538,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5
   },
- 
+
   label: {
     marginTop: 12,
     marginBottom: 5,
     color: '#555'
   },
- 
+
   input: {
     backgroundColor: '#F2F2F2',
     borderRadius: 12,
     padding: 12
   },
- 
+
   inputIcon: {
     backgroundColor: '#F2F2F2',
     borderRadius: 12,
@@ -357,21 +558,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between'
   },
- 
+
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 15
   },
- 
+
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(34,34,34,0.35)',
     justifyContent: 'center',
     alignItems: 'center'
   },
- 
+
   customDropdown: {
     backgroundColor: '#F2F2F2',
     borderRadius: 12,
@@ -380,70 +581,70 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center'
   },
- 
+
   dropdownActive: {
     borderWidth: 2,
     borderColor: '#A7C7FF'
   },
- 
+
   dropdownText: {
     color: '#999'
   },
- 
+
   dropdownTextActive: {
     color: '#565555ff',
     fontWeight: '500'
   },
- 
+
   dropdownModal: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 10,
     width: '85%'
   },
- 
+
   dropdownItem: {
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 10
   },
- 
+
   dropdownItemActive: {
     backgroundColor: '#E8F6FF'
   },
- 
+
   dropdownItemText: {
     color: '#333'
   },
- 
+
   dropdownItemTextActive: {
     fontWeight: 'bold',
     color: '#91a7f0ff'
   },
   calendarBox: {
-  backgroundColor: '#b489f5ff',
-  borderRadius: 24,
-  padding: 16,
-  width: '90%'
-},
- 
-calendarActions: {
-  flexDirection: 'row',
-  justifyContent: 'flex-end',
-  marginTop: 10
-},
- 
-cancelText: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 16,
+    width: '90%'
+  },
+
+  calendarActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10
+  },
+
+  cancelText: {
     marginRight: 20,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#4d70e2ff'
-},
- 
-okText: {
+  },
+
+  okText: {
     fontSize: 16,
     marginRight: 20,
     fontWeight: 'bold',
     color: '#5e42fbff'
-}
+  }
 });

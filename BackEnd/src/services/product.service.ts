@@ -35,11 +35,17 @@ export async function createProduct(userId: string, payload: any) {
   // ===============================
   // 1️⃣ หา template จาก barcode (GLOBAL)
   // ===============================
-  const { data: existingTemplate } = await supabaseAdmin
-    .from('product_templates')
-    .select('*')
-    .eq('barcode', barcode)
-    .maybeSingle()
+  let existingTemplate = null
+
+  if (barcode) {
+    const { data } = await supabaseAdmin
+      .from('product_templates')
+      .select('*')
+      .eq('barcode', barcode)
+      .maybeSingle()
+
+    existingTemplate = data
+  }
 
   let templateId = existingTemplate?.id ?? null
 
@@ -50,7 +56,7 @@ export async function createProduct(userId: string, payload: any) {
     const { data: newTemplate, error } = await supabaseAdmin
       .from('product_templates')
       .insert({
-        barcode,
+        barcode: barcode || `MANUAL_${Date.now()}`,
         name,
         category,
         default_storage: storage,
@@ -93,6 +99,7 @@ export async function createProduct(userId: string, payload: any) {
         name,
         category,
         location_id: locationId,
+        storage_id: storage,
         storage_date: storageDate,
         expiration_date: expireDate,
         notify_enabled: notifyEnabled,
@@ -106,4 +113,48 @@ export async function createProduct(userId: string, payload: any) {
   if (productError) throw productError
 
   return product
+}
+
+export async function getOverview(userId: string, locationId: string) {
+  const { data: items, error } = await supabaseAdmin
+    .from('products')
+    .select(`
+      id,
+      expiration_date,
+      location_id,
+      owner_id,
+      product_templates (
+        image_url
+      )
+    `)
+    .eq('location_id', locationId)
+    .eq('owner_id', userId)
+
+  if (error) throw error
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const threeDaysLater = new Date()
+  threeDaysLater.setHours(0, 0, 0, 0)
+  threeDaysLater.setDate(threeDaysLater.getDate() + 3)
+
+  const nearlyExpired = (items || []).filter((item: any) => {
+    if (!item.expiration_date) return false
+    const exp = new Date(item.expiration_date)
+    exp.setHours(0, 0, 0, 0)
+    return exp >= today && exp <= threeDaysLater
+  })
+
+  const expired = (items || []).filter((item: any) => {
+    if (!item.expiration_date) return false
+    const exp = new Date(item.expiration_date)
+    exp.setHours(0, 0, 0, 0)
+    return exp < today
+  })
+
+  return {
+    nearlyExpired,
+    expired,
+  }
 }

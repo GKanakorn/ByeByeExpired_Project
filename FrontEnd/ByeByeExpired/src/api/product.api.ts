@@ -34,7 +34,7 @@ export async function uploadTemplateImage(
    2️⃣ create product
 ================================ */
 export async function createProduct(payload: {
-userId: string
+  userId: string
   barcode: string
   templateId?: string | null
   name: string
@@ -45,8 +45,16 @@ userId: string
   expireDate: Date
   quantity: number
   imageUrl?: string | null
+
+  // Personal
   notifyEnabled: boolean
   notifyBeforeDays?: number | null
+
+  // Business (optional)
+  price?: number | null
+  store?: string | null
+  lowStockEnabled?: boolean
+  lowStockThreshold?: number | null
 }) {
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
@@ -71,6 +79,28 @@ userId: string
   if (!res.ok) {
     const err = await res.json()
     throw new Error(err.message || 'Create product failed')
+  }
+
+  return res.json()
+}
+
+export async function getOverview(locationId: string) {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) {
+    throw new Error('Not authenticated')
+  }
+
+  const res = await fetch(`${API_URL}/products/overview/${locationId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Get overview failed')
   }
 
   return res.json()

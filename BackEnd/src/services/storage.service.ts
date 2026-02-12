@@ -15,10 +15,24 @@ export async function createStorage(data: CreateStorageInput) {
 export async function getStoragesByLocation(locationId: string) {
   const { data, error } = await supabaseAdmin
     .from('storages')
-    .select('id, name, icon, color, item_count')
+    .select(`
+      id,
+      name,
+      icon,
+      color,
+      location_id,
+      created_at,
+      products(count)
+    `)
     .eq('location_id', locationId)
-    .order('created_at', { ascending: true })
 
   if (error) throw error
-  return data
+
+  // แปลง products(count) → item_count
+  const storagesWithCount = (data || []).map((storage: any) => ({
+    ...storage,
+    item_count: storage.products?.[0]?.count ?? 0,
+  }))
+
+  return storagesWithCount
 }

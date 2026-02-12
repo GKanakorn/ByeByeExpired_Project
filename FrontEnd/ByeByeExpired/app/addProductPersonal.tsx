@@ -11,16 +11,19 @@ import {
   Alert
 } from 'react-native';
 import { useEffect, useState } from 'react';
+import React from 'react'
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router'
-import { createProduct, uploadTemplateImage } from '../src/api/product.api';
+import { createProduct } from '../src/api/product.api';
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
 import { supabase } from '../src/supabase'
+import { getStoragesByLocation } from '../src/api/storage.api'
+
 interface Option {
   label: string;
   value: string;
@@ -56,6 +59,7 @@ export default function AddProductScreen() {
   const [uploading, setUploading] = useState(false)
   const [category, setCategory] = useState('');
   const [storage, setStorage] = useState('');
+  const [storageOptions, setStorageOptions] = useState<Option[]>([])
 
   const [storageDate, setStorageDate] = useState(new Date());
   const [expireDate, setExpireDate] = useState(new Date());
@@ -64,10 +68,9 @@ export default function AddProductScreen() {
 
   const [showStorage, setShowStorage] = useState(false);
   const [showExpire, setShowExpire] = useState(false);
-  const [quantity, setQuantity] = useState<number>(1)
-  const [expireAlert, setExpireAlert] = useState(true);
+  const [quantity, setQuantity] = useState<string>('')
   const [notifyEnabled, setNotifyEnabled] = useState(false)
-  const [notifyDays, setNotifyDays] = useState('3')
+  const [notifyDays, setNotifyDays] = useState('')
 
   useEffect(() => {
     if (product) {
@@ -76,6 +79,42 @@ export default function AddProductScreen() {
       setImage(product.image_url ?? null)
     }
   }, [])
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchStorages = async () => {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+
+          if (!session || !locationId) return
+
+          const storages = await getStoragesByLocation(
+            session.access_token,
+            locationId as string
+          )
+
+          const formatted: Option[] = [
+            ...storages.map((s: any) => ({
+              label: s.name,
+              value: s.id,
+            })),
+            {
+              label: '+ Add New Storage',
+              value: '__add_new__',
+            },
+          ]
+
+          setStorageOptions(formatted)
+        } catch (err) {
+          console.log('Fetch storages error:', err)
+        }
+      }
+
+      fetchStorages()
+    }, [locationId])
+  )
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
     router.replace('/overview')
@@ -98,17 +137,18 @@ export default function AddProductScreen() {
       setImage(result.assets[0].uri)
     }
   }
-  const quantityNumber = Number(quantity)
-
-  if (!quantityNumber || quantityNumber <= 0) {
-    Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
-    return
-  }
 
   const handleSave = async () => {
     try {
       setUploading(true)
 
+      const quantityNumber = Number(quantity)
+
+      if (!quantityNumber || quantityNumber <= 0) {
+        Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
+        setUploading(false)
+        return
+      }
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -194,8 +234,17 @@ export default function AddProductScreen() {
                     value === item.value && styles.dropdownItemActive
                   ]}
                   onPress={() => {
-                    onSelect(item.value);
                     setOpenDropdown(null);
+
+                    if (item.value === '__add_new__') {
+                      router.push({
+                        pathname: '/addStorage',
+                        params: { locationId },
+                      });
+                      return;
+                    }
+
+                    onSelect(item.value);
                   }}
                 >
                   <Text
@@ -275,11 +324,7 @@ export default function AddProductScreen() {
             value={storage}
             type="storage"
             onSelect={setStorage}
-            options={[
-              { label: 'Fridge', value: 'fridge' },
-              { label: 'Freezer', value: 'freezer' },
-              { label: 'Dry Food', value: 'dry' }
-            ]}
+            options={storageOptions}
           />
 
           <Text style={styles.label}>Storage Date</Text>
@@ -310,26 +355,32 @@ export default function AddProductScreen() {
           <TextInput
             style={styles.input}
             keyboardType="numeric"
-            value={quantity.toString()}
-            onChangeText={(text) => {
-              const num = Number(text)
-              if (!isNaN(num)) setQuantity(num)
-            }}
+            value={quantity}
+            onChangeText={setQuantity}
           />
 
           <View style={styles.switchRow}>
             <Text>Days before expiration</Text>
             <Switch
               value={notifyEnabled}
-              onValueChange={setNotifyEnabled}
+              onValueChange={(value) => {
+                setNotifyEnabled(value)
+                if (!value) {
+                  setNotifyDays('')   // 🔥 เคลียร์ค่าทันทีเมื่อปิด switch
+                }
+              }}
             />
           </View>
-          <TextInput
-            style={styles.input}
-            keyboardType="numeric"
-            value={notifyDays}
-            onChangeText={setNotifyDays}
-          />
+
+          {notifyEnabled && (
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={notifyDays}
+              onChangeText={setNotifyDays}
+              placeholder="Enter days before expiration"
+            />
+          )}
         </View>
       </ScrollView>
 
@@ -347,6 +398,8 @@ export default function AddProductScreen() {
               value={tempDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+              accentColor="#5B5FC7"
+              themeVariant="light"
               onChange={(e: any, d?: Date) => {
                 if (d) setTempDate(d);
               }}
@@ -501,7 +554,7 @@ const styles = StyleSheet.create({
     color: '#91a7f0ff'
   },
   calendarBox: {
-    backgroundColor: '#b489f5ff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 16,
     width: '90%'

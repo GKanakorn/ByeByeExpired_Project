@@ -70,7 +70,8 @@ export default function AddStorageScreen() {
       Alert.alert('Success', 'Storage created')
       router.back()
     } catch (err: any) {
-      Alert.alert('Error', err.message)
+      console.log('CREATE STORAGE FULL ERROR:', err)
+      Alert.alert('Error', JSON.stringify(err))
     }
   }
 

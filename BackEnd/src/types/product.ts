@@ -1,3 +1,4 @@
+// types/product.ts
 export interface AddProductPayload {
   barcode?: string
   name: string

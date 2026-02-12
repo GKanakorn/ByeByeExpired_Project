@@ -1,4 +1,3 @@
-//import * as React from "react";
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -17,6 +16,7 @@ import { useFocusEffect } from "@react-navigation/native"
 import { supabase } from "../src/supabase"
 import { getStoragesByLocation } from "../src/api/storage.api"
 import { STORAGE_ICON_CONFIG, DEFAULT_STORAGE_ICON } from "../constants/storageIcons";
+import { getOverview } from "../src/api/product.api"
 
 type Location = {
   id: string
@@ -28,25 +28,37 @@ export default function BusinessOverview({ location }: { location: Location }) {
   const router = useRouter();
   const [storages, setStorages] = useState<any[]>([])
   const [loadingStorages, setLoadingStorages] = useState(false)
+  const [nearlyExpired, setNearlyExpired] = useState<any[]>([])
+  const [expired, setExpired] = useState<any[]>([])
+
   useFocusEffect(
     React.useCallback(() => {
-      const fetchStorages = async () => {
+      const fetchOverviewData = async () => {
         try {
           setLoadingStorages(true)
-          const { data: session } = await supabase.auth.getSession()
-          const token = session?.session?.access_token
-          if (!token) return
 
-          const data = await getStoragesByLocation(token, location.id)
-          setStorages(data)
+          const { data: session } = await supabase.auth.getSession()
+          const userId = session?.session?.user?.id
+          if (!userId) return
+
+          // ====== 1. Fetch Storages ======
+          const token = session?.session?.access_token
+          if (token) {
+            const storageData = await getStoragesByLocation(token, location.id)
+            setStorages(storageData)
+          }
+          // ====== 2. Fetch Overview from Backend ======
+          const overview = await getOverview(location.id)
+          setNearlyExpired(overview.nearlyExpired || [])
+          setExpired(overview.expired || [])
         } catch (e) {
-          console.log("FETCH STORAGE ERROR", e)
+          console.log("FETCH OVERVIEW ERROR", e)
         } finally {
           setLoadingStorages(false)
         }
       }
 
-      fetchStorages()
+      fetchOverviewData()
     }, [location.id])
   )
 
@@ -119,21 +131,31 @@ export default function BusinessOverview({ location }: { location: Location }) {
             <Text style={[styles.sectionText, { color: "#ce840d" }]}>Nearly expired</Text>
           </View>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>12</Text>
+            <Text style={styles.badgeText}>{nearlyExpired.length}</Text>
           </View>
         </LinearGradient>
 
         <View style={styles.NearlyExpiredBox}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {["24 JAN 2026", "25 JAN 2026", "28 JAN 2026", "29 JAN 2026", "29 JAN 2026", "30 JAN 2026"].map((date, i) => (
-              <View key={i} style={styles.card}>
-                <Image
-                  source={{ uri: "https://via.placeholder.com/60" }}
-                  style={styles.productImg}
-                />
-                <Text style={styles.cardDate}>{date}</Text>
-              </View>
-            ))}
+            {nearlyExpired.map((item) => {
+              const formatted = new Date(item.expiration_date)
+                .toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })
+                .toUpperCase()
+
+              return (
+                <View key={item.id} style={styles.cardNear}>
+                  <Image
+                    source={{ uri: item.product_templates?.image_url || 'https://via.placeholder.com/60' }}
+                    style={styles.productImg}
+                  />
+                  <Text style={styles.cardDateNear}>{formatted}</Text>
+                </View>
+              )
+            })}
           </ScrollView>
         </View>
 
@@ -149,22 +171,34 @@ export default function BusinessOverview({ location }: { location: Location }) {
             <Text style={[styles.sectionText, { color: "#FF4D4D" }]}>Expired</Text>
           </View>
 
-          <View style={styles.badgeCircle}>
-            <Text style={styles.badgeText}>8</Text>
+          <View style={styles.badgeEx}>
+            <Text style={styles.badgeText}>{expired.length}</Text>
           </View>
         </LinearGradient>
 
         <View style={styles.ExpiredBox}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {["7 JAN 2026", "8 JAN 2026", "8 JAN 2026", "9 JAN 2026", "12 JAN 2026", "13 JAN 2026"].map((date, i) => (
-              <View key={i} style={styles.card}>
-                <Image
-                  source={{ uri: "https://via.placeholder.com/60" }}
-                  style={styles.productImg}
-                />
-                <Text style={styles.cardDate}>{date}</Text>
-              </View>
-            ))}
+            {expired.map((item) => {
+              const formatted = new Date(item.expiration_date)
+                .toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })
+                .toUpperCase()
+
+              return (
+                <View key={item.id} style={styles.cardEx}>
+                  <Image
+                    source={{
+                      uri: item.product_templates?.image_url || 'https://via.placeholder.com/60',
+                    }}
+                    style={styles.productImg}
+                  />
+                  <Text style={styles.cardDateEx}>{formatted}</Text>
+                </View>
+              )
+            })}
           </ScrollView>
         </View>
         {/* Storage */}
@@ -436,19 +470,33 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   badge: {
-    backgroundColor: "#F5A623",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    backgroundColor: '#4CAF50',
+
+    width: 28,
+    height: 28,
+
+    borderRadius: 14,   // ต้อง = width/2
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badgeText: {
-    color: "white",
-    fontSize: 12,
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 
   /* Cards */
-  card: {
-    backgroundColor: "#fff0f0",
+  cardNear: {
+    backgroundColor: "#FBF4D2",
+    padding: 10,
+    borderRadius: 12,
+    marginRight: 10,
+    marginTop: 10,
+    alignItems: "center",
+    width: 90,
+  },
+  cardEx: {
+    backgroundColor: "#BE9090",
     padding: 10,
     borderRadius: 12,
     marginRight: 10,
@@ -462,7 +510,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 6,
   },
-  cardDate: {
+  cardDateEx: {
+    fontSize: 10,
+    color: "#ffffff",
+  },
+  cardDateNear: {
     fontSize: 10,
     color: "#888",
   },
@@ -503,8 +555,13 @@ const styles = StyleSheet.create({
   },
   countBubble: {
     backgroundColor: "#3B82F6",
+    width: 24,
+    height: 24,
+
+    borderRadius: 12,   // ต้อง = width/2
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 8,
-    borderRadius: 10,
   },
   addStorage: {
     alignItems: "center",
@@ -558,13 +615,14 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: "#FFF",
   },
-  badgeCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,   // ครึ่งหนึ่งของ width/height = วงกลมพอดี
+  badgeEx: {
     backgroundColor: "#FF4D4D",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 28,
+    height: 28,
+
+    borderRadius: 14,   // ต้อง = width/2
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addIcon: {
     width: 45,

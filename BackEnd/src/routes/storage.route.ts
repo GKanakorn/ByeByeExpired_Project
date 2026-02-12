@@ -25,9 +25,14 @@ router.post(
 
       res.json(storage)
     } catch (err: any) {
-      console.error('CREATE STORAGE ERROR:', err)
+      console.error('CREATE STORAGE ERROR FULL:', err)
+
       res.status(400).json({
-        message: err.message || 'Create storage failed',
+        message:
+          err?.message ||
+          err?.details ||
+          (typeof err === 'object' ? JSON.stringify(err) : err) ||
+          'Create storage failed',
       })
     }
   }
@@ -43,9 +48,14 @@ router.get(
       const storages = await getStoragesByLocation(locationId)
       res.json(storages)
     } catch (err: any) {
-      console.error('GET STORAGES ERROR:', err)
+      console.error('GET STORAGES ERROR FULL:', err)
+
       res.status(400).json({
-        message: err.message || 'Fetch storages failed',
+        message:
+          err?.message ||
+          err?.details ||
+          (typeof err === 'object' ? JSON.stringify(err) : err) ||
+          'Fetch storages failed',
       })
     }
   }
