@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { supabase } from '../src/supabase'
+import * as ImagePicker from 'expo-image-picker';
 
 // Profile screen mock history data
 const historyData = [
@@ -29,6 +31,186 @@ const historyData = [
 export default function ProfilePage() {
   const router = useRouter();
   const [searchText, setSearchText] = useState('');
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+
+  const [totalItems, setTotalItems] = useState(0);
+  const [nearExpireItems, setNearExpireItems] = useState(0);
+  const [expiredItems, setExpiredItems] = useState(0);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setUserId(user.id);
+      setEmail(user.email ?? '');
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('avatar_url, full_name')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && data) {
+        if (data.avatar_url) {
+          setAvatarUrl(data.avatar_url);
+        }
+        if (data.full_name) {
+          setFullName(data.full_name);
+        }
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!userId) return;
+
+      const today = new Date();
+      const threeDaysLater = new Date();
+      threeDaysLater.setDate(today.getDate() + 3);
+
+      // ดึงสินค้าทั้งหมดของ user ทุก location
+      const { data, error } = await supabase
+        .from('products')
+        .select('expiration_date')
+        .eq('owner_id', userId);
+
+      if (error || !data) return;
+
+      let total = data.length;
+      let near = 0;
+      let expired = 0;
+
+      data.forEach((item: any) => {
+        const exp = new Date(item.expiration_date);
+
+        if (exp < today) {
+          expired++;
+        } else if (exp >= today && exp <= threeDaysLater) {
+          near++;
+        }
+      });
+
+      setTotalItems(total);
+      setNearExpireItems(near);
+      setExpiredItems(expired);
+    };
+
+    fetchStats();
+  }, [userId]);
+
+  const handleChangeAvatar = async () => {
+    try {
+      if (!userId) return;
+
+      // ขอ permission
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        alert('กรุณาอนุญาตให้เข้าถึงรูปภาพ');
+        return;
+      }
+
+      // เปิดเลือกภาพ
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const image = result.assets[0];
+      const response = await fetch(image.uri);
+      const arrayBuffer = await response.arrayBuffer();
+
+      const fileExt = image.uri.split('.').pop() ?? 'jpg';
+      const fileName = `${userId}.${fileExt}`;
+
+      // อัปโหลดไป Supabase Storage (ใช้ arrayBuffer แทน blob เพื่อแก้ปัญหา 0 bytes ใน React Native)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, arrayBuffer, {
+          upsert: true,
+          contentType: image.type ?? 'image/jpeg',
+        });
+
+      if (uploadError) {
+        console.log(uploadError);
+        alert('อัปโหลดรูปไม่สำเร็จ');
+        return;
+      }
+
+      // ดึง public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      const publicUrl = data.publicUrl;
+
+      // อัปเดตใน profiles table
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.log(updateError);
+        alert('อัปเดตโปรไฟล์ไม่สำเร็จ');
+        return;
+      }
+
+      // เพิ่ม query param กัน cache เพื่อให้รูปโหลดใหม่ทันที
+      setAvatarUrl(`${publicUrl}?t=${Date.now()}`);
+      alert('เปลี่ยนรูปโปรไฟล์สำเร็จ');
+    } catch (err) {
+      console.log(err);
+      alert('เกิดข้อผิดพลาด');
+    }
+  };
+
+  const handleUpdateName = async () => {
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ full_name: fullName })
+      .eq('id', userId);
+
+    if (error) {
+      alert('อัปเดตชื่อไม่สำเร็จ');
+    } else {
+      alert('อัปเดตชื่อสำเร็จ');
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+
+      // reset local states
+      setUserId(null);
+      setAvatarUrl(null);
+      setFullName('');
+      setEmail('');
+      setTotalItems(0);
+      setNearExpireItems(0);
+      setExpiredItems(0);
+
+      // กลับไปหน้า Load / Login (ปรับ path ถ้าหน้าแรกชื่ออื่น)
+      router.replace('/');
+    } catch (error) {
+      alert('ออกจากระบบไม่สำเร็จ');
+    }
+  };
 
   return (
     <LinearGradient
@@ -67,33 +249,73 @@ export default function ProfilePage() {
               style={styles.avatar}
             >
               <View style={styles.avatarInner}>
-                <Text style={styles.avatarEmoji}>👩</Text>
+                {avatarUrl ? (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={{ width: 90, height: 90, borderRadius: 45 }}
+                  />
+                ) : (
+                  <Ionicons name="person-circle" size={90} color="#A78BFA" />
+                )}
               </View>
-            </LinearGradient>
-          </View>
-          
+          </LinearGradient>
+            <TouchableOpacity
+              onPress={handleChangeAvatar}
+              style={styles.editIcon}
+            >
+              <Ionicons name="pencil" size={16} color="#fff" />
+            </TouchableOpacity>
+        </View>
           <LinearGradient
             colors={['rgba(147, 197, 253, 0.8)', 'rgba(196, 181, 253, 0.6)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.profileCard}
           >
-            <Text style={styles.userName}>Ebola Coronana</Text>
-            <Text style={styles.userEmail}>ebolacoronana@gmail.com</Text>
-            
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {isEditingName ? (
+                <>
+                  <TextInput
+                    style={[styles.userName, { borderBottomWidth: 1, borderColor: '#A78BFA' }]}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    onPress={async () => {
+                      await handleUpdateName();
+                      setIsEditingName(false);
+                    }}
+                  >
+                    <Ionicons name="checkmark" size={20} color="#7C3AED" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.userName}>
+                    {fullName || 'ยังไม่ได้ตั้งชื่อ'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setIsEditingName(true)}>
+                    <Ionicons name="pencil" size={16} color="#7C3AED" />
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+
+            <Text style={styles.userEmail}>{email}</Text>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>12</Text>
+                <Text style={styles.statNumber}>{totalItems}</Text>
                 <Text style={styles.statLabel}>สินค้า</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>3</Text>
+                <Text style={styles.statNumber}>{nearExpireItems}</Text>
                 <Text style={styles.statLabel}>ใกล้หมดอายุ</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>2</Text>
+                <Text style={styles.statNumber}>{expiredItems}</Text>
                 <Text style={styles.statLabel}>หมดอายุ</Text>
               </View>
             </View>
@@ -182,7 +404,11 @@ export default function ProfilePage() {
         </View>
 
         {/* Sign Out Button */}
-        <TouchableOpacity style={styles.signOutButton} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.signOutButton}
+          activeOpacity={0.8}
+          onPress={handleSignOut}
+        >
           <LinearGradient
             colors={['#F3E8FF', '#E9D5FF', '#DDD6FE']}
             start={{ x: 0, y: 0 }}
@@ -495,5 +721,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#7C3AED',
+  },
+  editIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#7C3AED',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });

@@ -304,10 +304,11 @@ export default function BusinessOverview({ location }: { location: Location }) {
               style={{ width: 27, height: 27 }}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/profile")}>
             <Image
               source={require("../assets/images/button4.png")}
               style={{ width: 22, height: 22 }}
+
             />
           </TouchableOpacity>
         </View>
