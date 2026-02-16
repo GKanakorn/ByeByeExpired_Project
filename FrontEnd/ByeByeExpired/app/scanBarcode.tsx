@@ -7,6 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router'
 import { useFocusEffect } from 'expo-router'
 import { lookupBarcode } from '../src/api/barcode.api'
+import * as Haptics from 'expo-haptics'
+import { Audio } from 'expo-av'
 
 export default function ScanBarcodeScreen() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export default function ScanBarcodeScreen() {
   const [loading, setLoading] = useState(false)
   const [cameraKey, setCameraKey] = useState(0)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const soundRef = useRef<Audio.Sound | null>(null)
 
   const {
     mode,
@@ -55,6 +58,37 @@ export default function ScanBarcodeScreen() {
     }
     getCameraPermissions();
   }, []);
+
+  // 🔔 Load beep sound on mount
+  useEffect(() => {
+    async function loadBeepSound() {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+        })
+        
+        // โหลดไฟล์เสียง beep จากโลคอลที่คุณใส่เอง
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/sounds/beep.mp3'),
+          { volume: 1.0, shouldPlay: false }
+        )
+        soundRef.current = sound
+        console.log('🔊 Beep sound loaded')
+      } catch (e) {
+        console.log('Sound load error:', e)
+      }
+    }
+    loadBeepSound()
+    
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync()
+      }
+    }
+  }, []);
+
   // Scanning animation - เคลื่อนตลอดเวลา
   useEffect(() => {
     const animateScanLine = () => {
@@ -77,9 +111,27 @@ export default function ScanBarcodeScreen() {
     animateScanLine(); // เริ่มทันที
   }, []);
 
+  // 🔔 ฟังก์ชันสร้าง feedback เมื่อสแกนเจอ
+  const playBeep = async () => {
+    try {
+      if (soundRef.current) {
+        await soundRef.current.setPositionAsync(0)
+        await soundRef.current.playAsync()
+      }
+    } catch (e) {
+      console.log('Audio error:', e)
+    }
+    // Haptic feedback เสมอ
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid)
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+  }
+
   const handleBarcodeScanned = async ({ data }: { data: string }) => {
     if (scannedRef.current) return
     scannedRef.current = true
+
+    // 🔔 Haptic feedback เมื่อสแกนเจอ
+    await playBeep()
 
     setIsScanned(true)
     setLoading(true)
@@ -202,7 +254,7 @@ export default function ScanBarcodeScreen() {
         <Text style={styles.title}>
           {mode === 'add' ? 'สแกนเพื่อเพิ่มสินค้า' : 'สแกนเพื่อลบสินค้า'}
         </Text>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.replace('/overview')}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
           <Ionicons name="close" size={24} color="white" />
         </TouchableOpacity>
       </View>
