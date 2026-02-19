@@ -1,37 +1,37 @@
-import { useRouter } from 'expo-router';
-import { View, Text, Button, StyleSheet } from 'react-native';
+import React from "react"
+import { View, Text, StyleSheet } from "react-native"
+import { useLocation } from "../src/context/LocationContext"
+import PersonalOverview from "../components/PersonalOverview"
+import BusinessOverview from "../components/BusinessOverview"
+
 
 export default function OverviewScreen() {
-  const router = useRouter();
+  const { currentLocation } = useLocation()
 
-  const handleBack = () => {
-    // สั่งให้ถอยกลับไปหน้าก่อนหน้า (เหมือนกดปุ่ม Back)
-    router.back();
-  };
+  // ยังไม่ได้เลือก location
+  if (!currentLocation) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.text}>ยังไม่ได้เลือกสถานที่</Text>
+      </View>
+    )
+  }
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>📊 หน้า Overview</Text>
-      <Text style={styles.subtitle}>ยินดีต้อนรับเข้าสู่ระบบ</Text>
-      <Button title="กลับ" color="red" onPress={handleBack} />
-    </View>
-  );
+  if (currentLocation.type === "business") {
+    return <BusinessOverview location={currentLocation} />
+  }
+
+  return <PersonalOverview location={currentLocation} />
 }
 
 const styles = StyleSheet.create({
-  container: {
+  center: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#e6f7ff', // เปลี่ยนสีพื้นหลังนิดหน่อยให้รู้ว่าคนละหน้า
+    alignItems: "center",
+    justifyContent: "center",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  subtitle: {
+  text: {
     fontSize: 16,
-    color: 'gray',
+    color: "#999",
   },
-});
+})
