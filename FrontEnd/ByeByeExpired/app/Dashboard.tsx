@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import Svg, { Circle, G } from 'react-native-svg';
 
 // Dashboard สำหรับแสดงสรุปข้อมูลวัตถุดิบที่ถูกทิ้ง พร้อม Bar Chart และ Pie Chart
+// ใช้สำหรับติดตามและวิเคราะห์ข้อมูลการสูญเสียวัตถุดิบรายเดือน
 const { width, height } = Dimensions.get('window');
 
 const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
