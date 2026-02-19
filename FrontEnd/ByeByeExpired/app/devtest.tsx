@@ -72,6 +72,14 @@ export default function DevTestScreen() {
             onPress={() => router.push('/profile')} 
           />
         </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Dashboard" 
+            color="blue" 
+            onPress={() => router.push('/Dashboard')} 
+          />
+        </View>
       </View>
     </ScrollView>
   );
