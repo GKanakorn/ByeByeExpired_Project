@@ -1,3 +1,4 @@
+//scanBarcode.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View, Animated, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -68,7 +69,7 @@ export default function ScanBarcodeScreen() {
           allowsRecordingIOS: false,
           staysActiveInBackground: false,
         })
-        
+
         // โหลดไฟล์เสียง beep จากโลคอลที่คุณใส่เอง
         const { sound } = await Audio.Sound.createAsync(
           require('../assets/sounds/beep.mp3'),
@@ -81,7 +82,7 @@ export default function ScanBarcodeScreen() {
       }
     }
     loadBeepSound()
-    
+
     return () => {
       if (soundRef.current) {
         soundRef.current.unloadAsync()
@@ -130,27 +131,37 @@ export default function ScanBarcodeScreen() {
     if (scannedRef.current) return
     scannedRef.current = true
 
-    // 🔔 Haptic feedback เมื่อสแกนเจอ
     await playBeep()
-
     setIsScanned(true)
     setLoading(true)
 
-    const res = await lookupBarcode(data)
+    if (mode === 'add') {
+      const res = await lookupBarcode(data)
 
-    // 👉 ส่งข้อมูลไปหน้า AddProduct
-    router.replace({
-      pathname:
-        context === 'business'
-          ? '/addProductBusiness'
-          : '/addProductPersonal',
-      params: {
-        barcode: data,
-        template: JSON.stringify(res.template),
-        isNew: (!res.found).toString(),
-        locationId,
-      },
-    })
+      router.replace({
+        pathname:
+          context === 'business'
+            ? '/addProductBusiness'
+            : '/addProductPersonal',
+        params: {
+          barcode: data,
+          template: JSON.stringify(res.template),
+          isNew: (!res.found).toString(),
+          locationId,
+        },
+      })
+    }
+
+    if (mode === 'remove') {
+      router.replace({
+        pathname: '/deleteProduct',
+        params: {
+          barcode: data,
+          locationId,
+          context,
+        },
+      })
+    }
   }
 
   const handleAddProduct = () => {

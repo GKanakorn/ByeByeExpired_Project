@@ -23,6 +23,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
 import { supabase } from '../src/supabase'
 import { getStoragesByLocation } from '../src/api/storage.api'
+import * as ImageManipulator from 'expo-image-manipulator'
 
 interface Option {
   label: string;
@@ -138,6 +139,41 @@ export default function AddProductScreen() {
     }
   }
 
+  const uploadImageToSupabase = async (uri: string, userId: string) => {
+    try {
+      // ⭐ แปลงภาพเป็น JPG ก่อน (ตัด transparency ทิ้ง)
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [],
+        {
+          compress: 0.9,
+          format: ImageManipulator.SaveFormat.JPEG, // 🔥 บังคับเป็น JPG
+        }
+      )
+
+      const response = await fetch(manipulatedImage.uri)
+      const arrayBuffer = await response.arrayBuffer()
+
+      const fileName = `${userId}/${Date.now()}.jpg`
+
+      const { error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, arrayBuffer, {
+          contentType: 'image/jpeg',
+        })
+
+      if (error) throw error
+
+      const { data } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName)
+
+      return data.publicUrl
+    } catch (err) {
+      console.log(err)
+      throw err
+    }
+  }
   const handleSave = async () => {
     try {
       setUploading(true)
@@ -146,9 +182,9 @@ export default function AddProductScreen() {
 
       if (!quantityNumber || quantityNumber <= 0) {
         Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
-        setUploading(false)
         return
       }
+
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -158,10 +194,18 @@ export default function AddProductScreen() {
         return
       }
 
+      // ⭐ upload รูปก่อน
+      let imageUrl = image
+
+      if (image && image.startsWith('file')) {
+        imageUrl = await uploadImageToSupabase(image, user.id)
+      }
+
+      // ⭐ แล้วค่อย create product
       await createProduct({
-        userId: user.id,           // ⭐ ตรงกับ type
+        userId: user.id,
         barcode: barcode || '',
-        templateId: null,          // ⭐ แก้ parsedTemplate
+        templateId: null,
         name,
         category,
         storage,
@@ -171,7 +215,7 @@ export default function AddProductScreen() {
         notifyEnabled,
         notifyBeforeDays: notifyEnabled ? Number(notifyDays) : null,
         quantity: quantityNumber,
-        imageUrl: image,
+        imageUrl: imageUrl, // ใส่ตรงนี้
       })
 
       Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
