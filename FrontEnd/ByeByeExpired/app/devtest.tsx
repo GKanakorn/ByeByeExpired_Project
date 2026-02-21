@@ -59,6 +59,22 @@ export default function DevTestScreen() {
 
         <View style={styles.buttonWrapper}>
           <Button 
+            title="ไปหน้า Nearly Expired"
+            color="green" 
+            onPress={() => router.push('/NearlyExpired')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Expired"
+            color="green" 
+            onPress={() => router.push('/Expired')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
             title="ไปหน้า Settings" 
             color="purple" 
             onPress={() => router.push('/setting')} 

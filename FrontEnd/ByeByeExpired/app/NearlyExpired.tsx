@@ -29,6 +29,7 @@ type Product = {
   exp: string;
   img: string;
 };
+
 const PRODUCTS = [
   {
     id: "1",
@@ -67,7 +68,7 @@ const PRODUCTS = [
   },
 ];
 
-export default function AllProductScreen() {
+export default function NearlyExpiredScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("All");
 
@@ -86,7 +87,7 @@ export default function AllProductScreen() {
 
   return (
     <LinearGradient
-      colors={["#E8F0FF", "#C7DBFF"]}   // สีไล่จากบนลงล่าง
+      colors={["#FCFFCD", "#FFE0A1"]}   // สีไล่จากบนลงล่าง
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={{ flex: 1 }}
@@ -95,13 +96,13 @@ export default function AllProductScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={22} color="#2563EB" />
+            <Ionicons name="chevron-back" size={22} color="#C98900" />
             <Text style={styles.backText}>Overview</Text>
           </TouchableOpacity>
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>ALL PRODUCT</Text>
+        <Text style={styles.title}>NEARLY EXPIRED</Text>
 
         {/* Tabs */}
         <ScrollView
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backText: {
-    color: "#2563EB",
+    color: "#C98900",
     fontSize: 15,
     marginLeft: 4,
   },
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 26,
     fontWeight: "600",
-    color: "#1D4ED8",
+    color: "#C98900",
     marginBottom: 15,
     marginTop: 30,
     letterSpacing: 1,
@@ -206,19 +207,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 28,
     justifyContent: "center",
-    backgroundColor: "#E5EDFF",
+    backgroundColor: "#fff7ca",
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: "#4F7DFF",
+    borderColor: "#C98900",
   },
 
   tabBtnActive: {
-    backgroundColor: "#4F7DFF",
+    backgroundColor: "#C98900",
   },
   tabText: {
     fontSize: 12,
-    color: "#4F7DFF",
+    color: "#C98900",
   },
   tabTextActive: {
     color: "#FFF",
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#4F7DFF",
+    backgroundColor: "#C98900",
     justifyContent: "center",
     alignItems: "center",
 

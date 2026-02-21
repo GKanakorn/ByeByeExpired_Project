@@ -292,13 +292,13 @@ export default function BusinessOverview({ location }: { location: Location }) {
               style={{ width: 22, height: 22 }}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/NearlyExpired")}>
             <Image
               source={require("../assets/images/button2.png")}
               style={{ width: 27, height: 27 }}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/Expired")}>
             <Image
               source={require("../assets/images/button3.png")}
               style={{ width: 27, height: 27 }}
