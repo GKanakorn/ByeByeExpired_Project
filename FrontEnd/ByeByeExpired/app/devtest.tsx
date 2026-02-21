@@ -29,8 +29,8 @@ export default function DevTestScreen() {
 
       <View style={styles.buttonWrapper}>
         <Button
-          title="ไปหน้า Showdetail"
-          onPress={() => router.push('/showDetail')}
+          title="ไปหน้า Add Product for Personal"
+          onPress={() => router.push('/addProductPersonal')}
         />
       </View>
       <View style={styles.buttonWrapper}>
