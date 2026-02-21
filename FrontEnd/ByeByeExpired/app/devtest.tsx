@@ -26,11 +26,23 @@ export default function DevTestScreen() {
           onPress={() => router.push('/addProductBusiness')}
         />
       </View>
+       <View style={styles.buttonWrapper}>
+        <Button
+          title="ไปหน้า Add Product for Personal"
+          onPress={() => router.push('/addProductPersonal')}
+        />
+      </View>
 
       <View style={styles.buttonWrapper}>
         <Button
-          title="ไปหน้า Showdetail"
-          onPress={() => router.push('/showDetail')}
+          title="ไปหน้า ShowdetailBusiness"
+          onPress={() => router.push('/showDetailBusiness')}
+        />
+      </View>
+      <View style={styles.buttonWrapper}>
+        <Button
+          title="ไปหน้า ShowdetailPersonal"
+          onPress={() => router.push('/showDetailPersonal')}
         />
       </View>
       <View style={styles.buttonWrapper}>
