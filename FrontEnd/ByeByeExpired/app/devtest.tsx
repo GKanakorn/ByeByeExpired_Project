@@ -80,6 +80,38 @@ export default function DevTestScreen() {
             onPress={() => router.push('/Dashboard')} 
           />
         </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Supplier Tracking" 
+            color="#7C3AED" 
+            onPress={() => router.push('/supplier')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Add Supplier" 
+            color="#9626C2" 
+            onPress={() => router.push('/addSupplier')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Detail Supplier" 
+            color="#8B5CF6" 
+            onPress={() => router.push('/DetailSupplier')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Show List (หมดอายุ)" 
+            color="#FF1493" 
+            onPress={() => router.push('/showList')} 
+          />
+        </View>
       </View>
     </ScrollView>
   );

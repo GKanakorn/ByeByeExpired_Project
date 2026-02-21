@@ -226,7 +226,10 @@ export default function LossDashboard() {
             </View>
 
             {/* View All Button */}
-            <TouchableOpacity style={styles.viewAllButton}>
+            <TouchableOpacity 
+              style={styles.viewAllButton}
+              onPress={() => router.push('/showList')}
+            >
               <LinearGradient
                 colors={['#A78BFA', '#8B5CF6']}
                 start={{ x: 0, y: 0 }}
