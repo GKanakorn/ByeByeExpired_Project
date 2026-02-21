@@ -24,7 +24,7 @@ export default function RootLayout() {
 
         // ❌ ยังไม่ login
         if (!user) {
-          if (pathname !== '/Register' && pathname !== '/supplier') {
+          if (pathname !== '/Register') {
             router.replace('/Register')
           }
           return
