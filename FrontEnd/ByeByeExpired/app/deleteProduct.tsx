@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+//deleteProduct.tsx
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,19 +13,136 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { ScrollView } from "react-native";
+import { supabase } from "../src/supabase";
+import { API_URL } from "../src/config/api";
 
 export default function DeleteProduct() {
   const router = useRouter();
   const [qtyModal, setQtyModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
-  const product = {
-    name: "ปลากระป๋องสามแม่ครัว",
-    exp: "20 Jan 2026",
-    amount: 10,
-    image: require("../assets/images/delete.png"),
-  };
+  const { barcode, locationId, context } = useLocalSearchParams<{
+    barcode?: string
+    locationId?: string
+    context?: 'personal' | 'business'
+  }>()
+
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!locationId) return;
+
+      try {
+        setLoading(true);
+
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+
+        // 🟢 ===== SCAN MODE =====
+        if (barcode) {
+          const res = await fetch(
+            `${API_URL}/products/by-barcode/${barcode}?locationId=${locationId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          const result = await res.json();
+          if (!res.ok) {
+            throw new Error(result.message || "Fetch product failed");
+          }
+
+          setProducts(Array.isArray(result) ? result : [result]);
+        }
+
+        // 🟢 ===== MANUAL MODE =====
+        else {
+          const res = await fetch(
+            `${API_URL}/products?locationId=${locationId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          const result = await res.json();
+          if (!res.ok) {
+            throw new Error(result.message || "Fetch product failed");
+          }
+
+          setProducts(result || []);
+        }
+      } catch (err) {
+        console.log("FETCH PRODUCT ERROR", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [barcode, locationId]);
+
+  console.log("DELETE PARAMS:", {
+    barcode,
+    locationId,
+    context,
+  })
+
+  const handleDelete = async () => {
+  if (!selectedProduct) return;
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+
+    const res = await fetch(
+      `${API_URL}/products/${selectedProduct.id}/delete`,
+      {
+        method: "PATCH", // ใช้ PATCH เพราะเราลด quantity
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          quantity: quantity,
+        }),
+      }
+    );
+
+    const result = await res.json();
+    if (!res.ok) {
+      throw new Error(result.message || "Delete failed");
+    }
+
+    // 🔥 รีเฟรช list ใหม่
+    setProducts((prev) =>
+      prev
+        .map((item) =>
+          item.id === selectedProduct.id
+            ? { ...item, quantity: item.quantity - quantity }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+
+    setConfirmModal(false);
+    setQuantity(1);
+
+  } catch (err) {
+    console.log("DELETE ERROR", err);
+  }
+};
 
   return (
     <LinearGradient
@@ -42,21 +160,63 @@ export default function DeleteProduct() {
         <View style={{ width: 28 }} />
       </View>
 
-      <View style={styles.card}>
-        <Image source={product.image} style={styles.image} />
-        <View style={{ flex: 1, marginLeft: 20 }}>
-          <Text style={styles.name}>{product.name}</Text>
-          <Text style={styles.detail}>{product.amount} piece</Text>
-          <Text style={styles.exp}>EXP : {product.exp}</Text>
-        </View>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* ===== PRODUCT LIST (All Lots) ===== */}
+        <View style={{ marginTop: 20, flex: 1 }}>
+          {loading && (
+            <Text style={{ textAlign: "center", color: "#666" }}>
+              Loading...
+            </Text>
+          )}
 
-        <TouchableOpacity
-          onPress={() => setQtyModal(true)}
-          style={styles.trashCircle}
-        >
-          <Ionicons name="trash-outline" size={25} color="#666" />
-        </TouchableOpacity>
-      </View>
+          {!loading && products.length === 0 && (
+            <Text style={{ textAlign: "center", color: "#666" }}>
+              No product found
+            </Text>
+          )}
+
+          {!loading &&
+            products.map((item) => (
+              <View key={item.id} style={styles.card}>
+                <Image
+                  source={{
+                    uri:
+                      item.product_templates?.image_url ||
+                      "https://via.placeholder.com/100",
+                  }}
+                  style={styles.image}
+                />
+
+                <View style={{ flex: 1, marginLeft: 15 }}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {item.product_templates?.name || item.name}
+                  </Text>
+
+                  <Text style={styles.detail}>
+                    {item.quantity} piece
+                  </Text>
+
+                  <Text style={styles.exp}>
+                    EXP :{" "}
+                    {item.expiration_date
+                      ? new Date(item.expiration_date).toLocaleDateString("en-GB")
+                      : "-"}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.trashCircle}
+                  onPress={() => {
+                    setSelectedProduct(item);
+                    setQtyModal(true);
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={22} color="#666" />
+                </TouchableOpacity>
+              </View>
+            ))}
+        </View>
+      </ScrollView>
 
       {/* ================= SELECT QUANTITY MODAL ================= */}
       <Modal visible={qtyModal} transparent animationType="slide">
@@ -67,16 +227,32 @@ export default function DeleteProduct() {
             <View style={styles.sectionDivider} />
 
             <View style={styles.productRow}>
-              <Image source={product.image} style={styles.image} />
+              <Image
+                source={{
+                  uri:
+                    selectedProduct?.product_templates?.image_url ||
+                    "https://via.placeholder.com/100",
+                }}
+                style={styles.image}
+              />
               <View style={{ marginLeft: 50 }}>
-                <Text style={styles.name}>{product.name}</Text>
-                <Text style={styles.detail}>{product.amount} piece</Text>
-                <Text style={styles.exp}>EXP : {product.exp}</Text>
+                <Text style={styles.name}>
+                  {selectedProduct?.product_templates?.name || "No product found"}
+                </Text>
+                <Text style={styles.detail}>
+                  {selectedProduct?.quantity ?? 0} piece
+                </Text>
+                <Text style={styles.exp}>
+                  EXP :{" "}
+                  {selectedProduct?.expiration_date
+                    ? new Date(selectedProduct.expiration_date).toLocaleDateString("en-GB")
+                    : "-"}
+                </Text>
               </View>
             </View>
             <View style={styles.sectionDivider} />
 
-            <Text style={{ marginTop: 20, textAlign: "center", alignSelf: "center",fontSize: 15, }}>
+            <Text style={{ marginTop: 20, textAlign: "center", alignSelf: "center", fontSize: 15, }}>
               จำนวนที่ต้องการลบ
             </Text>
 
@@ -142,7 +318,7 @@ export default function DeleteProduct() {
 
             <Text style={styles.modalTitle}>ยืนยันการลบสินค้า</Text>
             <Text style={{ textAlign: "center", marginVertical: 10 }}>
-              คุณต้องการลบสินค้า {product.name}
+              คุณต้องการลบสินค้า {selectedProduct?.product_templates?.name || "No product found"}
               {"\n"}จำนวน {quantity} ชิ้น
             </Text>
 
@@ -156,10 +332,7 @@ export default function DeleteProduct() {
 
               <TouchableOpacity
                 style={styles.confirmBtn}
-                onPress={() => {
-                  setConfirmModal(false);
-                  setQuantity(1);
-                }}
+                onPress={handleDelete}
               >
                 <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>ยืนยัน</Text>
               </TouchableOpacity>

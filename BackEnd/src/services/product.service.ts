@@ -158,3 +158,97 @@ export async function getOverview(userId: string, locationId: string) {
     expired,
   }
 }
+
+export async function deleteProductQuantity(
+  userId: string,
+  productId: string,
+  quantityToDelete: number
+) {
+  // 1️⃣ ดึง product ก่อน
+  const { data: product, error: fetchError } = await supabaseAdmin
+    .from('products')
+    .select('id, quantity, owner_id')
+    .eq('id', productId)
+    .eq('owner_id', userId)
+    .single()
+
+  if (fetchError || !product) {
+    throw new Error('Product not found')
+  }
+
+  if (quantityToDelete <= 0) {
+    throw new Error('Invalid quantity')
+  }
+
+  // 2️⃣ ถ้าลบหมดหรือมากกว่า → ลบทั้ง row
+  if (product.quantity <= quantityToDelete) {
+    const { error: deleteError } = await supabaseAdmin
+      .from('products')
+      .delete()
+      .eq('id', productId)
+      .eq('owner_id', userId)
+
+    if (deleteError) throw deleteError
+
+    return { deleted: true }
+  }
+
+  // 3️⃣ ถ้ายังเหลือ → update quantity
+  const { error: updateError } = await supabaseAdmin
+    .from('products')
+    .update({
+      quantity: product.quantity - quantityToDelete,
+    })
+    .eq('id', productId)
+    .eq('owner_id', userId)
+
+  if (updateError) throw updateError
+
+  return { deleted: false }
+}
+
+export async function getProductsByLocation(
+  userId: string,
+  locationId: string
+) {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select(`
+      *,
+      product_templates (
+        name,
+        image_url
+      )
+    `)
+    .eq('owner_id', userId)
+    .eq('location_id', locationId)
+    .order('expiration_date', { ascending: true })
+
+  if (error) throw error
+
+  return data
+}
+
+export async function getProductsByBarcode(
+  userId: string,
+  barcode: string,
+  locationId: string
+) {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select(`
+      *,
+      product_templates (
+        name,
+        image_url
+      )
+    `)
+    .eq('barcode', barcode)
+    .eq('location_id', locationId)
+    .eq('owner_id', userId)
+    .order('expiration_date', { ascending: true })
+
+  if (error) throw error
+
+  return data
+}
