@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
 import { requireAuth } from '../middleware/auth.middleware'
 import { requireLocationRole } from '../middleware/locationRole.middleware'
-import { createStorage } from '../services/storage.service'
+import { createStorage, deleteStorage } from '../services/storage.service'
 import { AuthRequest } from '../types/auth-request'
 import { getStoragesByLocation } from '../services/storage.service'
 
@@ -56,6 +56,30 @@ router.get(
           err?.details ||
           (typeof err === 'object' ? JSON.stringify(err) : err) ||
           'Fetch storages failed',
+      })
+    }
+  }
+)
+
+router.delete(
+  '/storages/:storageId',
+  requireAuth,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.id
+      const storageId = req.params.storageId as string
+
+      const result = await deleteStorage(userId, storageId)
+      res.json(result)
+    } catch (err: any) {
+      console.error('DELETE STORAGE ERROR FULL:', err)
+
+      res.status(400).json({
+        message:
+          err?.message ||
+          err?.details ||
+          (typeof err === 'object' ? JSON.stringify(err) : err) ||
+          'Delete storage failed',
       })
     }
   }

@@ -16,7 +16,12 @@ import { useFocusEffect } from "@react-navigation/native"
 import { supabase } from "../src/supabase"
 import { getStoragesByLocation } from "../src/api/storage.api"
 import { STORAGE_ICON_CONFIG, DEFAULT_STORAGE_ICON } from "../constants/storageIcons";
-import { getOverview } from "../src/api/product.api"
+import { getOverview, searchProducts } from "../src/api/product.api"
+import 'react-native-gesture-handler'
+import { Swipeable } from 'react-native-gesture-handler'
+import { RectButton } from 'react-native-gesture-handler'
+import { deleteStorage } from '../src/api/storage.api'
+import { Alert } from 'react-native'
 
 type Location = {
   id: string
@@ -30,35 +35,83 @@ export default function BusinessOverview({ location }: { location: Location }) {
   const [loadingStorages, setLoadingStorages] = useState(false)
   const [nearlyExpired, setNearlyExpired] = useState<any[]>([])
   const [expired, setExpired] = useState<any[]>([])
+  const [searchText, setSearchText] = useState("")
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [allProducts, setAllProducts] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+
+  const fetchAllData = async () => {
+    try {
+      setLoadingStorages(true)
+
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      const userId = session?.session?.user?.id
+
+      if (!token || !userId) return
+
+      // 1️⃣ โหลด storages
+      const storageData = await getStoragesByLocation(token, location.id)
+      setStorages(storageData)
+
+      // 2️⃣ โหลด overview ใหม่
+      const overview = await getOverview(location.id)
+      setNearlyExpired(overview.nearlyExpired || [])
+      setExpired(overview.expired || [])
+      setAllProducts([
+        ...(overview.nearlyExpired || []),
+        ...(overview.expired || [])
+      ])
+
+    } catch (e) {
+      console.log("FETCH OVERVIEW ERROR", e)
+    } finally {
+      setLoadingStorages(false)
+    }
+  }
+  const handleDeleteStorage = async (storageId: string) => {
+    Alert.alert(
+      'Delete Storage',
+      'Are you sure you want to delete this storage?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: session } = await supabase.auth.getSession()
+              const token = session?.session?.access_token
+              if (!token) return
+
+              await deleteStorage(token, storageId)
+
+              // โหลดใหม่แบบเดียวกับตอน fetch
+              await deleteStorage(token, storageId)
+              await fetchAllData()
+
+            } catch (error) {
+              console.log("DELETE STORAGE ERROR:", error)
+            }
+          }
+        }
+      ]
+    )
+  }
+  const renderRightActions = (storageId: string) => (
+    <TouchableOpacity
+      style={styles.deleteButton}
+      onPress={() => handleDeleteStorage(storageId)}
+    >
+      <Text style={{ color: "white", fontWeight: "600" }}>
+        Delete
+      </Text>
+    </TouchableOpacity>
+  );
 
   useFocusEffect(
     React.useCallback(() => {
-      const fetchOverviewData = async () => {
-        try {
-          setLoadingStorages(true)
-
-          const { data: session } = await supabase.auth.getSession()
-          const userId = session?.session?.user?.id
-          if (!userId) return
-
-          // ====== 1. Fetch Storages ======
-          const token = session?.session?.access_token
-          if (token) {
-            const storageData = await getStoragesByLocation(token, location.id)
-            setStorages(storageData)
-          }
-          // ====== 2. Fetch Overview from Backend ======
-          const overview = await getOverview(location.id)
-          setNearlyExpired(overview.nearlyExpired || [])
-          setExpired(overview.expired || [])
-        } catch (e) {
-          console.log("FETCH OVERVIEW ERROR", e)
-        } finally {
-          setLoadingStorages(false)
-        }
-      }
-
-      fetchOverviewData()
+      fetchAllData()
     }, [location.id])
   )
 
@@ -70,6 +123,24 @@ export default function BusinessOverview({ location }: { location: Location }) {
     month: "short",
     year: "numeric",
   }).toUpperCase();
+
+  const handleSearch = async (text: string) => {
+    if (text.trim().length === 0) {
+      setSearchResults([])
+      setIsSearching(false)
+      return
+    }
+
+    try {
+      setIsSearching(true)
+      const result = await searchProducts(location.id, text)
+      setSearchResults(result)
+    } catch (err) {
+      console.log("SEARCH ERROR:", err)
+    } finally {
+      setIsSearching(false)
+    }
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F7FB" }}>
@@ -116,7 +187,26 @@ export default function BusinessOverview({ location }: { location: Location }) {
         {/* Search */}
         <View style={styles.searchBox}>
           <Ionicons name="search" size={16} color="#aaa" />
-          <TextInput placeholder="Search Product" style={styles.searchInput} />
+          <TextInput
+            placeholder="Search Product"
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={(text) => {
+              setSearchText(text)
+              handleSearch(text)
+            }}
+          />
+
+          {searchText.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchText("")
+                setSearchResults([])
+              }}
+            >
+              <Ionicons name="close-circle" size={18} color="#aaa" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Nearly expired */}
@@ -227,46 +317,52 @@ export default function BusinessOverview({ location }: { location: Location }) {
               ?? DEFAULT_STORAGE_ICON;
 
             return (
-              <View
+              <Swipeable
                 key={item.id}
-                style={[
-                  styles.storageItem,
-                  {
-                    backgroundColor: "#d3ddff4d", // ✅ สีพื้นกล่อง คงที่
-                    borderRadius: 12,
-                    padding: 12,
-                  },
-                ]}
+                renderRightActions={() => renderRightActions(item.id)}
+                overshootRight={false}
+                rightThreshold={40}
               >
-                {/* วงกลม icon */}
                 <View
                   style={[
-                    styles.iconCircle,
-                    { backgroundColor: item.color || iconConfig.color }, // ✅ สีอยู่แค่วงกลม
+                    styles.storageItem,
+                    {
+                      backgroundColor: "#d3ddff4d",
+                      borderRadius: 12,
+                      padding: 12,
+                    },
                   ]}
                 >
-                  <Image
-                    source={iconConfig.image}
-                    style={styles.iconImage}
-                    resizeMode="contain"
-                  />
-                </View>
+                  {/* วงกลม icon */}
+                  <View
+                    style={[
+                      styles.iconCircle,
+                      { backgroundColor: item.color || iconConfig.color },
+                    ]}
+                  >
+                    <Image
+                      source={iconConfig.image}
+                      style={styles.iconImage}
+                      resizeMode="contain"
+                    />
+                  </View>
 
-                <Text style={{ flex: 1, marginLeft: 12, fontWeight: "600" }}>
-                  {item.name}
-                </Text>
-
-                <View
-                  style={[
-                    styles.countBubble,
-                    { backgroundColor: iconConfig.color },
-                  ]}
-                >
-                  <Text style={{ color: "white", fontSize: 12 }}>
-                    {item.item_count ?? 0}
+                  <Text style={{ flex: 1, marginLeft: 12, fontWeight: "600" }}>
+                    {item.name}
                   </Text>
+
+                  <View
+                    style={[
+                      styles.countBubble,
+                      { backgroundColor: iconConfig.color },
+                    ]}
+                  >
+                    <Text style={{ color: "white", fontSize: 12 }}>
+                      {item.item_count ?? 0}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              </Swipeable>
             );
           })}
 
@@ -281,6 +377,45 @@ export default function BusinessOverview({ location }: { location: Location }) {
         </View>
       </ScrollView>
 
+      {searchText.length > 0 && (
+        <>
+          <TouchableOpacity
+            style={styles.searchOverlayBackground}
+            activeOpacity={1}
+            onPress={() => {
+              setSearchText("")
+              setSearchResults([])
+            }}
+          />
+
+          <View style={styles.searchDropdown}>
+            {isSearching ? (
+              <Text style={{ color: "#999" }}>Searching...</Text>
+            ) : searchResults.length === 0 ? (
+              <Text style={{ color: "#999" }}>No product found</Text>
+            ) : (
+              searchResults.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.searchResultItem}
+                  onPress={() => {
+                    setSearchText("")
+                    setSearchResults([])
+                    router.push({
+                      pathname: "/showDetailProduct",
+                      params: { productId: item.id }
+                    })
+                  }}
+                >
+                  <Text style={{ fontWeight: "500" }}>
+                    {item.product_templates?.name}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        </>
+      )}
       {/* Bottom Navigation */}
       <View style={styles.bottomNavWrapper}>
         <View style={styles.bottomBackground} />
@@ -292,13 +427,13 @@ export default function BusinessOverview({ location }: { location: Location }) {
               style={{ width: 22, height: 22 }}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/NearlyExpired")}>
             <Image
               source={require("../assets/images/button2.png")}
               style={{ width: 27, height: 27 }}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/Expired")}>
             <Image
               source={require("../assets/images/button3.png")}
               style={{ width: 27, height: 27 }}
@@ -681,5 +816,47 @@ const styles = StyleSheet.create({
   headerIcon: {
     width: 27,
     height: 27,
-  }
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    borderRadius: 12,
+    marginVertical: 5,
+  },
+
+  deleteText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  searchOverlayBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2999,
+  },
+  searchDropdown: {
+    position: "absolute",
+    top: 165,
+    left: 20,
+    right: 20,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+    zIndex: 3000,
+  },
+
+  searchResultItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#eee",
+  },
 });

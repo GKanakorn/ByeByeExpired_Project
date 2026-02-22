@@ -105,3 +105,34 @@ export async function getOverview(locationId: string) {
 
   return res.json()
 }
+
+/* ===============================
+   3️⃣ search products
+================================ */
+export async function searchProducts(
+  locationId: string,
+  keyword: string
+) {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) {
+    throw new Error('Not authenticated')
+  }
+
+  const res = await fetch(
+    `${API_URL}/products/search?locationId=${locationId}&q=${encodeURIComponent(keyword)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Search products failed')
+  }
+
+  return res.json()
+}

@@ -36,3 +36,26 @@ export async function getStoragesByLocation(locationId: string) {
 
   return storagesWithCount
 }
+
+export async function deleteStorage(
+  userId: string,
+  storageId: string
+) {
+  // 1. ลบ products ก่อน (กัน FK error ถ้าไม่ได้ตั้ง cascade)
+  const { error: productError } = await supabaseAdmin
+    .from('products')
+    .delete()
+    .eq('storage_id', storageId)
+
+  if (productError) throw productError
+
+  // 2. ลบ storage
+  const { error } = await supabaseAdmin
+    .from('storages')
+    .delete()
+    .eq('id', storageId)
+
+  if (error) throw error
+
+  return { success: true }
+}

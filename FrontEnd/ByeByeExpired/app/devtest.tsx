@@ -43,6 +43,8 @@ export default function DevTestScreen() {
         <Button
           title="ไปหน้า ShowdetailPersonal"
           onPress={() => router.push('/showDetailPersonal')}
+          title="ไปหน้า Add Product for Personal"
+          onPress={() => router.push('/addProductPersonal')}
         />
       </View>
       <View style={styles.buttonWrapper}>
@@ -71,6 +73,22 @@ export default function DevTestScreen() {
 
         <View style={styles.buttonWrapper}>
           <Button 
+            title="ไปหน้า Nearly Expired"
+            color="green" 
+            onPress={() => router.push('/NearlyExpired')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Expired"
+            color="green" 
+            onPress={() => router.push('/Expired')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
             title="ไปหน้า Settings" 
             color="purple" 
             onPress={() => router.push('/setting')} 
@@ -90,6 +108,38 @@ export default function DevTestScreen() {
             title="ไปหน้า Dashboard" 
             color="blue" 
             onPress={() => router.push('/Dashboard')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Supplier Tracking" 
+            color="#7C3AED" 
+            onPress={() => router.push('/supplier')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Add Supplier" 
+            color="#9626C2" 
+            onPress={() => router.push('/addSupplier')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Detail Supplier" 
+            color="#8B5CF6" 
+            onPress={() => router.push('/detailSupplier')} 
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button 
+            title="ไปหน้า Show List (หมดอายุ)" 
+            color="#FF1493" 
+            onPress={() => router.push('/showList')} 
           />
         </View>
       </View>

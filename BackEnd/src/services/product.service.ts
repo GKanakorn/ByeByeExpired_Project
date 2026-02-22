@@ -252,3 +252,32 @@ export async function getProductsByBarcode(
 
   return data
 }
+export async function searchProducts(
+  userId: string,
+  locationId: string,
+  keyword: string
+) {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select(`
+      id,
+      quantity,
+      expiration_date,
+      storage_id,
+      location_id,
+      product_templates!inner (
+        id,
+        name,
+        image_url,
+        barcode
+      )
+    `)
+    .eq('owner_id', userId)         // ✅ ถูกต้อง
+    .eq('location_id', locationId)  // ✅ ถูกต้อง
+    .ilike('product_templates.name', `%${keyword}%`)
+    .order('expiration_date', { ascending: true })
+
+  if (error) throw error
+
+  return data || []
+}
