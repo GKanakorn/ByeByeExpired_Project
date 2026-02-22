@@ -57,3 +57,26 @@ export async function getStoragesByLocation(
 
   return data
 }
+
+export const deleteStorage = async (
+  token: string,
+  storageId: string
+) => {
+  const response = await fetch(
+    `${API_URL}/api/storages/${storageId}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(errorText || 'Delete storage failed')
+  }
+
+  return response.json()
+}

@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { supabase } from '../src/supabase'
 import { LocationProvider } from '../src/context/LocationContext'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 export default function RootLayout() {
   const pathname = usePathname()
@@ -48,9 +49,11 @@ export default function RootLayout() {
   }, [pathname])
 
   return (
-    <LocationProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="auto" />
-    </LocationProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <LocationProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+        <StatusBar style="auto" />
+      </LocationProvider>
+    </GestureHandlerRootView>
   )
 }

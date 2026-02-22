@@ -2,8 +2,12 @@
 import { Router, Response } from 'express'
 import { requireAuth } from '../middleware/auth.middleware'
 import {
-  createProduct, getOverview, deleteProductQuantity, getProductsByLocation,
+  createProduct,
+  getOverview,
+  deleteProductQuantity,
+  getProductsByLocation,
   getProductsByBarcode,
+  searchProducts
 } from '../services/product.service'
 import { AuthRequest } from '../types/auth-request'
 
@@ -60,6 +64,34 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 })
 
+router.get('/search', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id
+    const { locationId, q } = req.query
+
+    if (typeof locationId !== 'string') {
+      return res.status(400).json({ message: 'locationId is required' })
+    }
+
+    if (typeof q !== 'string' || q.trim() === '') {
+      return res.status(400).json({ message: 'Search keyword (q) is required' })
+    }
+
+    const result = await searchProducts(
+      userId,
+      locationId,
+      q
+    )
+
+    res.json(result)
+  } catch (err: any) {
+    console.error('🔥 SEARCH PRODUCTS ERROR:', err)
+    res.status(500).json({
+      message: err.message || 'Search products failed',
+    })
+  }
+})
+
 router.get('/by-barcode/:barcode', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
@@ -108,5 +140,33 @@ router.patch('/:id/delete', requireAuth, async (req: AuthRequest, res: Response)
     })
   }
 })
+
+router.get(
+  '/locations/:locationId/products',
+  requireAuth,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.id
+      const locationIdRaw = req.query.locationId
+
+      const products = await getProductsByLocation(
+      userId,
+      locationIdRaw as string
+    )
+
+      res.json(products)
+    } catch (err: any) {
+      console.error('GET PRODUCTS ERROR FULL:', err)
+
+      res.status(400).json({
+        message:
+          err?.message ||
+          err?.details ||
+          (typeof err === 'object' ? JSON.stringify(err) : err) ||
+          'Fetch products failed',
+      })
+    }
+  }
+)
 
 export default router

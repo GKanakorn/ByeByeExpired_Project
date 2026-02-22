@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import React from 'react'
-import { Picker } from '@react-native-picker/picker';
+import { Swipeable } from 'react-native-gesture-handler'
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -23,6 +23,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
 import { supabase } from '../src/supabase'
 import { getStoragesByLocation } from '../src/api/storage.api'
+import { deleteStorage } from '../src/api/storage.api'
 import * as ImageManipulator from 'expo-image-manipulator'
 
 interface Option {
@@ -72,6 +73,80 @@ export default function AddProductScreen() {
   const [quantity, setQuantity] = useState<string>('')
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [notifyDays, setNotifyDays] = useState('')
+
+  const handleDeleteStorage = async (storageId: string) => {
+  Alert.alert(
+    'Delete Storage',
+    'Are you sure you want to delete this storage?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession()
+
+            if (!session) return
+
+            await deleteStorage(session.access_token, storageId)
+
+            setStorageOptions(prev =>
+              prev.filter(s => s.value !== storageId)
+            )
+
+          } catch (err) {
+            Alert.alert('Error', 'Delete failed')
+          }
+        },
+      },
+    ]
+  )
+}
+
+  const renderRightActions = (storageId: string, storageName: string) => {
+  return (
+    <View style={{ flexDirection: 'row' }}>
+      {/* Edit */}
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#4e73ff',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 70,
+          borderTopLeftRadius: 10,
+          borderBottomLeftRadius: 10,
+        }}
+        onPress={() => {
+          setOpenDropdown(null)
+          router.push({
+            pathname: '/addStorage',
+            params: { storageId, storageName },
+          })
+        }}
+      >
+        <Ionicons name="create-outline" size={22} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Delete */}
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#ff4d4f',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 70,
+          borderTopRightRadius: 10,
+          borderBottomRightRadius: 10,
+        }}
+        onPress={() => handleDeleteStorage(storageId)}
+      >
+        <Ionicons name="trash-outline" size={22} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  )
+}
 
   useEffect(() => {
     if (product) {
@@ -263,45 +338,69 @@ export default function AddProductScreen() {
           />
         </TouchableOpacity>
 
-        <Modal transparent visible={openDropdown === type} animationType="fade">
+        <Modal
+  transparent
+  visible={openDropdown === type}
+  animationType="fade"
+  statusBarTranslucent
+>
           <TouchableOpacity
             style={styles.overlay}
             activeOpacity={1}
             onPress={() => setOpenDropdown(null)}
           >
             <View style={styles.dropdownModal}>
-              {options.map((item: Option) => (
-                <TouchableOpacity
-                  key={item.value}
-                  style={[
-                    styles.dropdownItem,
-                    value === item.value && styles.dropdownItemActive
-                  ]}
-                  onPress={() => {
-                    setOpenDropdown(null);
+              {options.map((item: Option) => {
+  if (item.value === '__add_new__') {
+    return (
+      <TouchableOpacity
+        key={item.value}
+        style={styles.dropdownItem}
+        onPress={() => {
+          setOpenDropdown(null)
+          router.push({
+            pathname: '/addStorage',
+            params: { locationId },
+          })
+        }}
+      >
+        <Text style={styles.dropdownItemText}>
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    )
+  }
 
-                    if (item.value === '__add_new__') {
-                      router.push({
-                        pathname: '/addStorage',
-                        params: { locationId },
-                      });
-                      return;
-                    }
-
-                    onSelect(item.value);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.dropdownItemText,
-                      value === item.value &&
-                      styles.dropdownItemTextActive
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+  return (
+    <Swipeable
+      key={item.value}
+      renderRightActions={() =>
+        renderRightActions(item.value, item.label)
+      }
+    >
+      <TouchableOpacity
+        style={[
+          styles.dropdownItem,
+          value === item.value && styles.dropdownItemActive
+        ]}
+        onPress={() => {
+          setOpenDropdown(null)
+          onSelect(item.value)
+        }}
+      >
+        <Text
+          style={[
+            styles.dropdownItemText,
+            value === item.value &&
+            styles.dropdownItemTextActive
+          ]}
+        >
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    </Swipeable>
+  )
+})}
             </View>
           </TouchableOpacity>
         </Modal>
