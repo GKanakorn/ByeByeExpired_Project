@@ -5,7 +5,7 @@ import locationRoute from './routes/location.route'
 import healthRoute from './routes/health.route'
 import barcodeRoute from './routes/barcode.route'
 import productRoute from './routes/product.route'
-
+import supplierRoutes from "./routes/supplier.route"
 
 const app = express()
 app.use(express.json())
@@ -16,5 +16,6 @@ app.use('/api', locationRoute)
 app.use('/api', storageRoute)
 app.use('/barcode', barcodeRoute)
 app.use('/products', productRoute)
+app.use("/api/suppliers", supplierRoutes)
 
 export default app

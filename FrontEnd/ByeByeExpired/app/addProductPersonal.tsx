@@ -74,80 +74,6 @@ export default function AddProductScreen() {
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [notifyDays, setNotifyDays] = useState('')
 
-  const handleDeleteStorage = async (storageId: string) => {
-    Alert.alert(
-      'Delete Storage',
-      'Are you sure you want to delete this storage?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const {
-                data: { session },
-              } = await supabase.auth.getSession()
-
-              if (!session) return
-
-              await deleteStorage(session.access_token, storageId)
-
-              setStorageOptions(prev =>
-                prev.filter(s => s.value !== storageId)
-              )
-
-            } catch (err) {
-              Alert.alert('Error', 'Delete failed')
-            }
-          },
-        },
-      ]
-    )
-  }
-
-  const renderRightActions = (storageId: string, storageName: string) => {
-    return (
-      <View style={{ flexDirection: 'row' }}>
-        {/* Edit */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#4e73ff',
-            justifyContent: 'center',
-            alignItems: 'center',
-            width: 70,
-            borderTopLeftRadius: 10,
-            borderBottomLeftRadius: 10,
-          }}
-          onPress={() => {
-            setOpenDropdown(null)
-            router.push({
-              pathname: '/addStorage',
-              params: { storageId, storageName },
-            })
-          }}
-        >
-          <Ionicons name="create-outline" size={22} color="#fff" />
-        </TouchableOpacity>
-
-        {/* Delete */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: '#ff4d4f',
-            justifyContent: 'center',
-            alignItems: 'center',
-            width: 70,
-            borderTopRightRadius: 10,
-            borderBottomRightRadius: 10,
-          }}
-          onPress={() => handleDeleteStorage(storageId)}
-        >
-          <Ionicons name="trash-outline" size={22} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    )
-  }
-
   useEffect(() => {
     if (product) {
       setName(product.name ?? '')
@@ -372,33 +298,26 @@ export default function AddProductScreen() {
                 }
 
                 return (
-                  <Swipeable
-                    key={item.value}
-                    renderRightActions={() =>
-                      renderRightActions(item.value, item.label)
-                    }
+                  <TouchableOpacity
+                    style={[
+                      styles.dropdownItem,
+                      value === item.value && styles.dropdownItemActive
+                    ]}
+                    onPress={() => {
+                      setOpenDropdown(null)
+                      onSelect(item.value)
+                    }}
                   >
-                    <TouchableOpacity
+                    <Text
                       style={[
-                        styles.dropdownItem,
-                        value === item.value && styles.dropdownItemActive
+                        styles.dropdownItemText,
+                        value === item.value &&
+                        styles.dropdownItemTextActive
                       ]}
-                      onPress={() => {
-                        setOpenDropdown(null)
-                        onSelect(item.value)
-                      }}
                     >
-                      <Text
-                        style={[
-                          styles.dropdownItemText,
-                          value === item.value &&
-                          styles.dropdownItemTextActive
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                    </TouchableOpacity>
-                  </Swipeable>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
                 )
               })}
             </View>

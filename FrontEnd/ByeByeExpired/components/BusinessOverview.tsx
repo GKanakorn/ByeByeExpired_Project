@@ -167,11 +167,11 @@ export default function BusinessOverview({ location }: { location: Location }) {
 
           {/* ขวา */}
           <View style={styles.rightIcons}>
-            <TouchableOpacity style={styles.iconBtn}>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push("/Dashboard")}>
               <Ionicons name="pie-chart-outline" size={20} color="#FF6EC7" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.iconBtn}>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push("/supplier")}>
               <Ionicons name="cube-outline" size={20} color="#FF6EC7" />
             </TouchableOpacity>
 

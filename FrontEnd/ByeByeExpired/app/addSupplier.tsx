@@ -16,6 +16,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { supabase } from '../src/supabase';
+import { createSupplier } from '../src/api/supplier.api'
 
 export default function AddSupplierScreen() {
   const router = useRouter();
@@ -28,15 +31,17 @@ export default function AddSupplierScreen() {
     contact: '',
     note: '',
   });
+  const [uploading, setUploading] = useState(false);
 
   const handleChange = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+
   const pickImage = async () => {
     // Request permission
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (permissionResult.granted === false) {
       Alert.alert('Permission required', 'You need to allow access to your photos to upload an image.');
       return;
@@ -54,6 +59,85 @@ export default function AddSupplierScreen() {
       setImageUri(result.assets[0].uri);
     }
   };
+  const uploadImageToSupabase = async (uri: string, userId: string) => {
+    try {
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [],
+        {
+          compress: 0.9,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+
+      const response = await fetch(manipulatedImage.uri);
+      const arrayBuffer = await response.arrayBuffer();
+
+      const fileName = `${userId}/${Date.now()}.jpg`;
+
+      const { error } = await supabase.storage
+        .from('supplier-images')
+        .upload(fileName, arrayBuffer, {
+          contentType: 'image/jpeg',
+        });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage
+        .from('supplier-images')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
+  };
+
+  const handleSave = async () => {
+    if (!form.name || !form.phone || !form.address) {
+      Alert.alert('กรอกข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลที่มี *')
+      return
+    }
+
+    try {
+      setUploading(true)
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        Alert.alert('Error', 'User not logged in')
+        return
+      }
+
+      let imageUrl: string | null = null
+
+      if (imageUri && imageUri.startsWith('file')) {
+        imageUrl = await uploadImageToSupabase(imageUri, user.id)
+      }
+
+      // ⭐ เรียกผ่าน API แทน insert ตรง ๆ
+      await createSupplier({
+        company_name: form.name,
+        phone: form.phone,
+        address: form.address,
+        email: form.email,
+        contact_name: form.contact,
+        note: form.note,
+        image_url: imageUrl,
+      })
+
+      Alert.alert('สำเร็จ', 'เพิ่ม Supplier เรียบร้อย')
+      router.back()
+    } catch (error: any) {
+      console.log(error.message)
+      Alert.alert('เกิดข้อผิดพลาด', error.message ?? 'ไม่สามารถบันทึกข้อมูลได้')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <LinearGradient colors={['#F8EFFF', '#FBE9FF']} style={styles.gradient}>
@@ -62,7 +146,9 @@ export default function AddSupplierScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={styles.headerAction}>Cancle</Text>
           </TouchableOpacity>
-          <Text style={styles.headerAction}>Save</Text>
+          <TouchableOpacity onPress={handleSave}>
+            <Text style={styles.headerAction}>Save</Text>
+          </TouchableOpacity>
         </View>
 
         <KeyboardAvoidingView
@@ -70,62 +156,62 @@ export default function AddSupplierScreen() {
           style={{ flex: 1 }}
           keyboardVerticalOffset={0}
         >
-          <ScrollView 
-            contentContainerStyle={styles.content} 
+          <ScrollView
+            contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-          <Text style={styles.title}>New Supplier</Text>
+            <Text style={styles.title}>New Supplier</Text>
 
-          <View style={styles.avatarWrapper}>
-            <View style={styles.avatarCircle}>
-              {imageUri ? (
-                <Image source={{ uri: imageUri }} style={styles.avatarImage} />
-              ) : (
-                <Ionicons name="person" size={60} color="#FFFFFF" />
-              )}
+            <View style={styles.avatarWrapper}>
+              <View style={styles.avatarCircle}>
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={styles.avatarImage} />
+                ) : (
+                  <Ionicons name="person" size={60} color="#FFFFFF" />
+                )}
+              </View>
+              <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
+                <Text style={styles.addPhotoText}>เพิ่มรูปภาพ</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
-              <Text style={styles.addPhotoText}>เพิ่มรูปภาพ</Text>
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.card}>
-            <Input
-              label="ชื่อร้าน / บริษัท *"
-              value={form.name}
-              onChangeText={(value) => handleChange('name', value)}
-            />
-            <Input
-              label="เบอร์โทรศัพท์ *"
-              value={form.phone}
-              onChangeText={(value) => handleChange('phone', value)}
-            />
-            <Input
-              label="ที่อยู่ *"
-              value={form.address}
-              onChangeText={(value) => handleChange('address', value)}
-            />
-          </View>
+            <View style={styles.card}>
+              <Input
+                label="ชื่อร้าน / บริษัท *"
+                value={form.name}
+                onChangeText={(value) => handleChange('name', value)}
+              />
+              <Input
+                label="เบอร์โทรศัพท์ *"
+                value={form.phone}
+                onChangeText={(value) => handleChange('phone', value)}
+              />
+              <Input
+                label="ที่อยู่ *"
+                value={form.address}
+                onChangeText={(value) => handleChange('address', value)}
+              />
+            </View>
 
-          <View style={styles.card}>
-            <Input
-              label="อีเมล"
-              value={form.email}
-              onChangeText={(value) => handleChange('email', value)}
-            />
-            <Input
-              label="ชื่อผู้ติดต่อ"
-              value={form.contact}
-              onChangeText={(value) => handleChange('contact', value)}
-            />
-            <Input
-              label="หมายเหตุ"
-              value={form.note}
-              onChangeText={(value) => handleChange('note', value)}
-            />
-          </View>
-        </ScrollView>
+            <View style={styles.card}>
+              <Input
+                label="อีเมล"
+                value={form.email}
+                onChangeText={(value) => handleChange('email', value)}
+              />
+              <Input
+                label="ชื่อผู้ติดต่อ"
+                value={form.contact}
+                onChangeText={(value) => handleChange('contact', value)}
+              />
+              <Input
+                label="หมายเหตุ"
+                value={form.note}
+                onChangeText={(value) => handleChange('note', value)}
+              />
+            </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>

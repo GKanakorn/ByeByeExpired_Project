@@ -12,12 +12,17 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useEffect } from 'react';
+import { getSuppliers } from '../src/api/supplier.api'
+import { useFocusEffect } from '@react-navigation/native'
+import { useCallback } from 'react'
+
 //Define the Supplier
 interface Supplier {
   id: string;
   name: string;
   phone: string;
-  logo: any;
+  image_url: string;
 }
 
 const { width } = Dimensions.get('window');
@@ -27,41 +32,39 @@ export default function SupplierScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [suppliers, setSuppliers] = useState<Supplier[]>([
-    {
-      id: '1',
-      name: 'Makro Sriracha',
-      phone: '02-xxx-xxxx',
-      logo: require('../assets/images/makro.jpg'),
-    },
-    {
-      id: '2',
-      name: 'Makro Chonburi',
-      phone: '01-xxx-xxxx',
-      logo: require('../assets/images/makro.jpg'),
-    },
-    {
-      id: '3',
-      name: 'Makro LaemChabang',
-      phone: '08-xxx-xxxx',
-      logo: require('../assets/images/makro.jpg'),
-    },
-    {
-      id: '4',
-      name: 'Lotus Sriracha',
-      phone: '09-xxx-xxxx',
-      logo: require('../assets/images/lotus.png'),
-    },
-  ]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
 
   const filteredSuppliers = suppliers.filter((supplier) =>
     supplier.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const fetchSuppliers = async () => {
+    try {
+      const data = await getSuppliers()
 
+      const formatted = data.map((item: any) => ({
+        id: item.id,
+        name: item.company_name,   // 👈 แก้ตรงนี้
+        phone: item.phone,
+        image_url: item.image_url
+      }))
+
+      setSuppliers(formatted)
+    } catch (error) {
+      console.log(error)
+    }
+  }
   const renderSupplierItem = ({ item }: { item: Supplier }) => (
-    <TouchableOpacity style={styles.supplierCard}>
+    <TouchableOpacity
+      style={styles.supplierCard}
+      onPress={() => router.push(`/detailSupplier?id=${item.id}`)}
+    >
       <Image
-        source={item.logo}
+        source={
+          item.image_url
+            ? { uri: item.image_url }
+            : require('../assets/images/default.png')
+        }
         style={styles.supplierLogo}
         resizeMode="cover"
       />
@@ -76,10 +79,15 @@ export default function SupplierScreen() {
     </TouchableOpacity>
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchSuppliers()
+    }, [])
+  )
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F3E8FF" />
-      
+
       {/* Fixed Header Section */}
       <View style={styles.fixedHeader}>
         {/* Header */}
