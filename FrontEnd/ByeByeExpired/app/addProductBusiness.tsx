@@ -40,26 +40,28 @@ interface DropdownProps {
 export default function AddProductScreen() {
   const router = useRouter();
 
-  const {
-    barcode,
-    template,
-    locationId,
-  } = useLocalSearchParams<{
-    barcode: string
-    template: string
-    locationId: string
-  }>()
+  const params = useLocalSearchParams()
+  const barcode = Array.isArray(params.barcode) ? params.barcode[0] : params.barcode
+  const template = Array.isArray(params.template) ? params.template[0] : params.template
+  const locationIdParam = Array.isArray(params.locationId)
+    ? params.locationId[0]
+    : params.locationId
 
   const product = template
     ? JSON.parse(template as string)
     : null
+  const locationId = locationIdParam as string | undefined
 
   const [name, setName] = useState('')
   const [image, setImage] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [category, setCategory] = useState('');
   const [storage, setStorage] = useState('');
-  const [storageOptions, setStorageOptions] = useState<Option[]>([])
+  const [storageOptions] = useState<Option[]>([
+    { label: 'Freezer', value: 'freezer' },
+    { label: 'Fridge', value: 'fridge' },
+    { label: 'Dry Food', value: 'dry_food' },
+  ])
 
   const [storageDate, setStorageDate] = useState(new Date());
   const [expireDate, setExpireDate] = useState(new Date());
@@ -106,7 +108,7 @@ export default function AddProductScreen() {
         name,
         category,
         storage,
-        locationId,
+        locationId: locationId ?? '',
         storageDate,
         expireDate,
         quantity: quantityNumber,
@@ -136,41 +138,6 @@ export default function AddProductScreen() {
     }
   }, [])
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const fetchStorages = async () => {
-        try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession()
-
-          if (!session || !locationId) return
-
-          const storages = await getStoragesByLocation(
-            session.access_token,
-            locationId as string
-          )
-
-          const formatted: Option[] = [
-            ...storages.map((s: any) => ({
-              label: s.name,
-              value: s.id,
-            })),
-            {
-              label: '+ Add New Storage',
-              value: '__add_new__',
-            },
-          ]
-
-          setStorageOptions(formatted)
-        } catch (err) {
-          console.log('Fetch storages error:', err)
-        }
-      }
-
-      fetchStorages()
-    }, [locationId])
-  )
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
     router.replace('/overview')
@@ -249,7 +216,7 @@ export default function AddProductScreen() {
                     if (item.value === '__add_new__') {
                       router.push({
                         pathname: '/addStorage',
-                        params: { locationId },
+                        params: { locationId: locationId ?? '' },
                       });
                       return;
                     }
@@ -281,7 +248,7 @@ export default function AddProductScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
-              <Text style={styles.headerBtn}>Cancel</Text>
+              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
               <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Save</Text>

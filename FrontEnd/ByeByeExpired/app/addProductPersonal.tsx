@@ -61,7 +61,11 @@ export default function AddProductScreen() {
   const [uploading, setUploading] = useState(false)
   const [category, setCategory] = useState('');
   const [storage, setStorage] = useState('');
-  const [storageOptions, setStorageOptions] = useState<Option[]>([])
+  const storageOptions: Option[] = [
+    { label: 'Freezer', value: 'freezer' },
+    { label: 'Fridge', value: 'fridge' },
+    { label: 'Dry Food', value: 'dry_food' }
+  ]
 
   const [storageDate, setStorageDate] = useState(new Date());
   const [expireDate, setExpireDate] = useState(new Date());
@@ -156,41 +160,6 @@ export default function AddProductScreen() {
     }
   }, [])
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const fetchStorages = async () => {
-        try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession()
-
-          if (!session || !locationId) return
-
-          const storages = await getStoragesByLocation(
-            session.access_token,
-            locationId as string
-          )
-
-          const formatted: Option[] = [
-            ...storages.map((s: any) => ({
-              label: s.name,
-              value: s.id,
-            })),
-            {
-              label: '+ Add New Storage',
-              value: '__add_new__',
-            },
-          ]
-
-          setStorageOptions(formatted)
-        } catch (err) {
-          console.log('Fetch storages error:', err)
-        }
-      }
-
-      fetchStorages()
-    }, [locationId])
-  )
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
     router.replace('/overview')
@@ -418,7 +387,7 @@ export default function AddProductScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
-              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>
+              <Text style={styles.headerBtn}>
                 Save
               </Text>
             </TouchableOpacity>
@@ -596,7 +565,8 @@ const styles = StyleSheet.create({
   },
   headerBtn: {
     fontSize: 16,
-    color: '#333'
+    color: '#333',
+    fontWeight: 'bold'
   },
   imageBox: {
     marginTop: 16,
