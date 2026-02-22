@@ -61,11 +61,7 @@ export default function AddProductScreen() {
   const [uploading, setUploading] = useState(false)
   const [category, setCategory] = useState('');
   const [storage, setStorage] = useState('');
-  const storageOptions: Option[] = [
-    { label: 'Freezer', value: 'freezer' },
-    { label: 'Fridge', value: 'fridge' },
-    { label: 'Dry Food', value: 'dry_food' }
-  ]
+  const [storageOptions, setStorageOptions] = useState<Option[]>([])
 
   const [storageDate, setStorageDate] = useState(new Date());
   const [expireDate, setExpireDate] = useState(new Date());
@@ -79,78 +75,78 @@ export default function AddProductScreen() {
   const [notifyDays, setNotifyDays] = useState('')
 
   const handleDeleteStorage = async (storageId: string) => {
-  Alert.alert(
-    'Delete Storage',
-    'Are you sure you want to delete this storage?',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const {
-              data: { session },
-            } = await supabase.auth.getSession()
+    Alert.alert(
+      'Delete Storage',
+      'Are you sure you want to delete this storage?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const {
+                data: { session },
+              } = await supabase.auth.getSession()
 
-            if (!session) return
+              if (!session) return
 
-            await deleteStorage(session.access_token, storageId)
+              await deleteStorage(session.access_token, storageId)
 
-            setStorageOptions(prev =>
-              prev.filter(s => s.value !== storageId)
-            )
+              setStorageOptions(prev =>
+                prev.filter(s => s.value !== storageId)
+              )
 
-          } catch (err) {
-            Alert.alert('Error', 'Delete failed')
-          }
+            } catch (err) {
+              Alert.alert('Error', 'Delete failed')
+            }
+          },
         },
-      },
-    ]
-  )
-}
+      ]
+    )
+  }
 
   const renderRightActions = (storageId: string, storageName: string) => {
-  return (
-    <View style={{ flexDirection: 'row' }}>
-      {/* Edit */}
-      <TouchableOpacity
-        style={{
-          backgroundColor: '#4e73ff',
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: 70,
-          borderTopLeftRadius: 10,
-          borderBottomLeftRadius: 10,
-        }}
-        onPress={() => {
-          setOpenDropdown(null)
-          router.push({
-            pathname: '/addStorage',
-            params: { storageId, storageName },
-          })
-        }}
-      >
-        <Ionicons name="create-outline" size={22} color="#fff" />
-      </TouchableOpacity>
+    return (
+      <View style={{ flexDirection: 'row' }}>
+        {/* Edit */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#4e73ff',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: 70,
+            borderTopLeftRadius: 10,
+            borderBottomLeftRadius: 10,
+          }}
+          onPress={() => {
+            setOpenDropdown(null)
+            router.push({
+              pathname: '/addStorage',
+              params: { storageId, storageName },
+            })
+          }}
+        >
+          <Ionicons name="create-outline" size={22} color="#fff" />
+        </TouchableOpacity>
 
-      {/* Delete */}
-      <TouchableOpacity
-        style={{
-          backgroundColor: '#ff4d4f',
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: 70,
-          borderTopRightRadius: 10,
-          borderBottomRightRadius: 10,
-        }}
-        onPress={() => handleDeleteStorage(storageId)}
-      >
-        <Ionicons name="trash-outline" size={22} color="#fff" />
-      </TouchableOpacity>
-    </View>
-  )
-}
+        {/* Delete */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#ff4d4f',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: 70,
+            borderTopRightRadius: 10,
+            borderBottomRightRadius: 10,
+          }}
+          onPress={() => handleDeleteStorage(storageId)}
+        >
+          <Ionicons name="trash-outline" size={22} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    )
+  }
 
   useEffect(() => {
     if (product) {
@@ -160,6 +156,41 @@ export default function AddProductScreen() {
     }
   }, [])
 
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchStorages = async () => {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+
+          if (!session || !locationId) return
+
+          const storages = await getStoragesByLocation(
+            session.access_token,
+            locationId as string
+          )
+
+          const formatted: Option[] = [
+            ...storages.map((s: any) => ({
+              label: s.name,
+              value: s.id,
+            })),
+            {
+              label: '+ Add New Storage',
+              value: '__add_new__',
+            },
+          ]
+
+          setStorageOptions(formatted)
+        } catch (err) {
+          console.log('Fetch storages error:', err)
+        }
+      }
+
+      fetchStorages()
+    }, [locationId])
+  )
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
     router.replace('/overview')
@@ -308,11 +339,11 @@ export default function AddProductScreen() {
         </TouchableOpacity>
 
         <Modal
-  transparent
-  visible={openDropdown === type}
-  animationType="fade"
-  statusBarTranslucent
->
+          transparent
+          visible={openDropdown === type}
+          animationType="fade"
+          statusBarTranslucent
+        >
           <TouchableOpacity
             style={styles.overlay}
             activeOpacity={1}
@@ -320,56 +351,56 @@ export default function AddProductScreen() {
           >
             <View style={styles.dropdownModal}>
               {options.map((item: Option) => {
-  if (item.value === '__add_new__') {
-    return (
-      <TouchableOpacity
-        key={item.value}
-        style={styles.dropdownItem}
-        onPress={() => {
-          setOpenDropdown(null)
-          router.push({
-            pathname: '/addStorage',
-            params: { locationId },
-          })
-        }}
-      >
-        <Text style={styles.dropdownItemText}>
-          {item.label}
-        </Text>
-      </TouchableOpacity>
-    )
-  }
+                if (item.value === '__add_new__') {
+                  return (
+                    <TouchableOpacity
+                      key={item.value}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setOpenDropdown(null)
+                        router.push({
+                          pathname: '/addStorage',
+                          params: { locationId },
+                        })
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                }
 
-  return (
-    <Swipeable
-      key={item.value}
-      renderRightActions={() =>
-        renderRightActions(item.value, item.label)
-      }
-    >
-      <TouchableOpacity
-        style={[
-          styles.dropdownItem,
-          value === item.value && styles.dropdownItemActive
-        ]}
-        onPress={() => {
-          setOpenDropdown(null)
-          onSelect(item.value)
-        }}
-      >
-        <Text
-          style={[
-            styles.dropdownItemText,
-            value === item.value &&
-            styles.dropdownItemTextActive
-          ]}
-        >
-          {item.label}
-        </Text>
-      </TouchableOpacity>
-    </Swipeable>
-  )
-})}
+                return (
+                  <Swipeable
+                    key={item.value}
+                    renderRightActions={() =>
+                      renderRightActions(item.value, item.label)
+                    }
+                  >
+                    <TouchableOpacity
+                      style={[
+                        styles.dropdownItem,
+                        value === item.value && styles.dropdownItemActive
+                      ]}
+                      onPress={() => {
+                        setOpenDropdown(null)
+                        onSelect(item.value)
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          value === item.value &&
+                          styles.dropdownItemTextActive
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  </Swipeable>
+                )
+              })}
             </View>
           </TouchableOpacity>
         </Modal>
@@ -387,7 +418,7 @@ export default function AddProductScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
-              <Text style={styles.headerBtn}>
+              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>
                 Save
               </Text>
             </TouchableOpacity>
@@ -565,8 +596,7 @@ const styles = StyleSheet.create({
   },
   headerBtn: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: 'bold'
+    color: '#333'
   },
   imageBox: {
     marginTop: 16,

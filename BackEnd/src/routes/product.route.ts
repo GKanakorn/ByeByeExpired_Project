@@ -7,11 +7,13 @@ import {
   deleteProductQuantity,
   getProductsByLocation,
   getProductsByBarcode,
-  searchProducts
+  searchProducts,
+  getProductById
 } from '../services/product.service'
 import { AuthRequest } from '../types/auth-request'
 
 const router = Router()
+
 
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -168,5 +170,26 @@ router.get(
     }
   }
 )
+
+router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id
+    const productId = req.params.id as string
+
+    const product = await getProductById(userId, productId)
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' })
+    }
+
+    res.json(product)
+
+  } catch (err: any) {
+    console.error('🔥 GET PRODUCT DETAIL ERROR:', err)
+    res.status(500).json({
+      message: err.message || 'Fetch product detail failed',
+    })
+  }
+})
 
 export default router

@@ -402,7 +402,7 @@ export default function BusinessOverview({ location }: { location: Location }) {
                     setSearchText("")
                     setSearchResults([])
                     router.push({
-                      pathname: "/showDetailProduct",
+                      pathname: "/showDetailBusiness",
                       params: { productId: item.id }
                     })
                   }}

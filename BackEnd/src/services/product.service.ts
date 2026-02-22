@@ -281,3 +281,36 @@ export async function searchProducts(
 
   return data || []
 }
+export async function getProductById(
+  userId: string,
+  productId: string
+) {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select(`
+      id,
+      quantity,
+      expiration_date,
+      storage_date,
+      storage_id,
+      note,
+      location_id,
+      product_templates (
+        id,
+        name,
+        category,
+        image_url,
+        barcode
+      )
+    `)
+    .eq('id', productId)
+    .eq('owner_id', userId)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null
+    throw error
+  }
+
+  return data
+}

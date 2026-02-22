@@ -391,7 +391,7 @@ export default function PersonalOverview({ location }: { location: Location }) {
                                         setSearchText("")
                                         setSearchResults([])
                                         router.push({
-                                            pathname: "/showDetailProduct",
+                                            pathname: "/showDetailPersonal",
                                             params: { productId: item.id }
                                         })
                                     }}
