@@ -117,7 +117,7 @@ export default function DevTestScreen() {
           <Button 
             title="ไปหน้า Detail Supplier" 
             color="#8B5CF6" 
-            onPress={() => router.push('/DetailSupplier')} 
+            onPress={() => router.push('/detailSupplier')} 
           />
         </View>
 
