@@ -136,3 +136,80 @@ export async function searchProducts(
 
   return res.json()
 }
+
+// Get all products, optionally by locationId
+export async function getProducts(locationId: string) {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(
+    `${API_URL}/products?locationId=${locationId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Get products failed')
+  }
+
+  return res.json()
+}
+
+
+/* ===============================
+   4️⃣ get expired products
+================================ */
+export async function getExpiredProducts(locationId: string) {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(
+    `${API_URL}/products/expired?locationId=${locationId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Get expired products failed')
+  }
+
+  return res.json()
+}
+
+/* ===============================
+   5️⃣ get nearly expired products
+================================ */
+export async function getNearlyExpiredProducts(locationId: string) {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(
+    `${API_URL}/products/nearly-expired?locationId=${locationId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Get nearly expired products failed')
+  }
+
+  return res.json()
+}

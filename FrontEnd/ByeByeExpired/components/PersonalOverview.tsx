@@ -411,30 +411,61 @@ export default function PersonalOverview({ location }: { location: Location }) {
                 <View style={styles.bottomBackground} />
 
                 <View style={styles.bottomNav}>
-                    <TouchableOpacity onPress={() => router.push("/allProduct")}>
-                        <Image
-                            source={require("../assets/images/button1.png")}
-                            style={{ width: 22, height: 22 }}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => router.push("/NearlyExpired")}>
-                        <Image
-                            source={require("../assets/images/button2.png")}
-                            style={{ width: 27, height: 27 }}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => router.push("/Expired")}>
-                        <Image
-                            source={require("../assets/images/button3.png")}
-                            style={{ width: 27, height: 27 }}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => router.push("/profile")}>
-                        <Image
-                            source={require("../assets/images/button4.png")}
-                            style={{ width: 22, height: 22 }}
-                        />
-                    </TouchableOpacity>
+                    <View style={styles.bottomNav}>
+                        <TouchableOpacity
+                            onPress={() =>
+                                router.replace({
+                                    pathname: "/allProduct",
+                                    params: {
+                                        locationId: location.id,
+                                        context: location.type,
+                                    },
+                                })
+                            }
+                        >
+                            < Image source={require("../assets/images/button1.png")}
+                                style={{ width: 22, height: 22 }}
+                            />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() =>
+                                router.replace({
+                                    pathname: "/NearlyExpired",
+                                    params: {
+                                        locationId: location.id,
+                                        context: location.type,
+                                    },
+                                })
+                            }
+                        >
+                            <Image source={require("../assets/images/button2.png")}
+                                style={{ width: 27, height: 27 }}
+                            />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() =>
+                                router.replace({
+                                    pathname: "/Expired",
+                                    params: {
+                                        locationId: location.id,
+                                        context: location.type,
+                                    },
+                                })
+                            }
+                        >
+                            <Image source={require("../assets/images/button3.png")}
+                                style={{ width: 27, height: 27 }}
+                            />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => router.replace("/profile")}>
+                            <Image source={require("../assets/images/button4.png")}
+                                style={{ width: 22, height: 22 }}
+                            />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 
@@ -447,46 +478,48 @@ export default function PersonalOverview({ location }: { location: Location }) {
             </TouchableOpacity>
 
 
-            {showPlusMinus && (
-                <View style={styles.plusMinusContainer}>
-                    <TouchableOpacity
-                        style={styles.minusBtn}
-                        onPress={() => {
-                            setShowPlusMinus(false)
-                            router.replace({
-                                pathname: '/scanBarcode',
-                                params: {
-                                    mode: 'remove',
-                                    context: location.type,
-                                    locationId: location.id,
-                                },
-                            })
-                        }}
-                    >
-                        <Text style={styles.pmText}>-</Text>
-                    </TouchableOpacity>
+            {
+                showPlusMinus && (
+                    <View style={styles.plusMinusContainer}>
+                        <TouchableOpacity
+                            style={styles.minusBtn}
+                            onPress={() => {
+                                setShowPlusMinus(false)
+                                router.replace({
+                                    pathname: '/scanBarcode',
+                                    params: {
+                                        mode: 'remove',
+                                        context: location.type,
+                                        locationId: location.id,
+                                    },
+                                })
+                            }}
+                        >
+                            <Text style={styles.pmText}>-</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.plusBtn}
-                        onPress={() => {
-                            setShowPlusMinus(false)
-                            router.replace({
-                                pathname: '/scanBarcode',
-                                params: {
-                                    mode: 'add',
-                                    context: location.type,
-                                    locationId: location.id,
-                                },
-                            })
-                        }}
-                    >
-                        <Text style={styles.pmText}>+</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+                        <TouchableOpacity
+                            style={styles.plusBtn}
+                            onPress={() => {
+                                setShowPlusMinus(false)
+                                router.replace({
+                                    pathname: '/scanBarcode',
+                                    params: {
+                                        mode: 'add',
+                                        context: location.type,
+                                        locationId: location.id,
+                                    },
+                                })
+                            }}
+                        >
+                            <Text style={styles.pmText}>+</Text>
+                        </TouchableOpacity>
+                    </View>
+                )
+            }
 
 
-        </View>
+        </View >
     );
 }
 

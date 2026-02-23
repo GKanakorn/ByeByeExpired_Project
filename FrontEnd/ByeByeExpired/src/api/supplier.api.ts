@@ -5,9 +5,8 @@ import { supabase } from '../supabase'
 /* ===============================
    1️⃣ Get All Suppliers
 ================================ */
-export async function getSuppliers() {
+export async function getSuppliers(token: string) {
     const { data: sessionData } = await supabase.auth.getSession()
-    const token = sessionData.session?.access_token
 
     if (!token) {
         throw new Error('Not authenticated')

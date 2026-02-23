@@ -21,8 +21,11 @@ import { useLocalSearchParams } from 'expo-router'
 import { createProduct } from '../src/api/product.api';
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
-import { supabase } from '../src/supabase'
 import { getStoragesByLocation } from '../src/api/storage.api'
+import { supabase } from '../src/supabase'
+import { getSuppliers } from '@/src/api/supplier.api';
+
+
 
 interface Option {
   label: string;
@@ -40,28 +43,26 @@ interface DropdownProps {
 export default function AddProductScreen() {
   const router = useRouter();
 
-  const params = useLocalSearchParams()
-  const barcode = Array.isArray(params.barcode) ? params.barcode[0] : params.barcode
-  const template = Array.isArray(params.template) ? params.template[0] : params.template
-  const locationIdParam = Array.isArray(params.locationId)
-    ? params.locationId[0]
-    : params.locationId
+  const {
+    barcode,
+    template,
+    locationId,
+  } = useLocalSearchParams<{
+    barcode: string
+    template: string
+    locationId: string
+  }>()
 
   const product = template
     ? JSON.parse(template as string)
     : null
-  const locationId = locationIdParam as string | undefined
 
   const [name, setName] = useState('')
   const [image, setImage] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [category, setCategory] = useState('');
   const [storage, setStorage] = useState('');
-  const [storageOptions] = useState<Option[]>([
-    { label: 'Freezer', value: 'freezer' },
-    { label: 'Fridge', value: 'fridge' },
-    { label: 'Dry Food', value: 'dry_food' },
-  ])
+  const [storageOptions, setStorageOptions] = useState<Option[]>([])
 
   const [storageDate, setStorageDate] = useState(new Date());
   const [expireDate, setExpireDate] = useState(new Date());
@@ -74,11 +75,14 @@ export default function AddProductScreen() {
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [notifyDays, setNotifyDays] = useState('')
   const [store, setStore] = useState('');
-  const [lowStock, setLowStock] = useState(true);
+  const [lowStock, setLowStock] = useState(false);
   const [expireAlert, setExpireAlert] = useState(false)
   const [price, setPrice] = useState<string>('')
   const [lowStockThreshold, setLowStockThreshold] = useState<string>('')
-  const [expireDays, setExpireDays] = useState<string>('')
+  const [supplierOptions, setSupplierOptions] = useState<Option[]>([])
+  const [supplier, setSupplier] = useState<string | null>(null)
+
+
   const handleSave = async () => {
     try {
       setUploading(true)
@@ -116,9 +120,9 @@ export default function AddProductScreen() {
         price: priceNumber || null,
         store,
         lowStockEnabled: lowStock,
-        notifyEnabled: expireAlert,
+        notifyEnabled,
         lowStockThreshold: lowStock ? Number(lowStockThreshold) : null,
-        notifyBeforeDays: expireAlert ? Number(expireDays) : null,
+        notifyBeforeDays: notifyEnabled ? Number(notifyDays) : null,
       })
 
       Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
@@ -137,7 +141,74 @@ export default function AddProductScreen() {
       setImage(product.image_url ?? null)
     }
   }, [])
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchSuppliers = async () => {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
 
+          if (!session) return
+
+          const suppliers = await getSuppliers(session.access_token)
+
+          const formatted: Option[] = [
+            ...suppliers.map((s: any) => ({
+              label: s.company_name,
+              value: s.id,
+            })),
+            {
+              label: '+ Add Supplier',
+              value: '__add_new__',
+            },
+          ]
+
+          setSupplierOptions(formatted)
+        } catch (err) {
+          console.log('Fetch suppliers error:', err)
+        }
+      }
+
+      fetchSuppliers()
+    }, [])
+  )
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchStorages = async () => {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+
+          if (!session || !locationId) return
+
+          const storages = await getStoragesByLocation(
+            session.access_token,
+            locationId as string
+          )
+
+          const formatted: Option[] = [
+            ...storages.map((s: any) => ({
+              label: s.name,
+              value: s.id,
+            })),
+            {
+              label: '+ Add New Storage',
+              value: '__add_new__',
+            },
+          ]
+
+          setStorageOptions(formatted)
+        } catch (err) {
+          console.log('Fetch storages error:', err)
+        }
+      }
+
+      fetchStorages()
+    }, [locationId])
+  )
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
     router.replace('/overview')
@@ -214,11 +285,21 @@ export default function AddProductScreen() {
                     setOpenDropdown(null);
 
                     if (item.value === '__add_new__') {
-                      router.push({
-                        pathname: '/addStorage',
-                        params: { locationId: locationId ?? '' },
-                      });
-                      return;
+
+                      if (type === 'storage') {
+                        router.push({
+                          pathname: '/addStorage',
+                          params: { locationId: locationId ?? '' },
+                        });
+                        return;
+                      }
+
+                      if (type === 'supplier') {
+                        router.push({
+                          pathname: '/addSupplier',
+                        });
+                        return;
+                      }
                     }
 
                     onSelect(item.value);
@@ -341,36 +422,33 @@ export default function AddProductScreen() {
             onChangeText={setPrice}
           />
 
-          <Text style={styles.label}>Store</Text>
+          <Text style={styles.label}>Supplier</Text>
           <Dropdown
-            label="Select Store"
-            value={store}
-            type="store"
-            onSelect={setStore}
-            options={[
-              { label: 'Makro', value: 'makro' },
-              { label: "Lotus's", value: 'lotus' },
-              { label: 'Big C', value: 'bigc' }
-            ]}
+            label="Select Supplier"
+            value={supplier ?? ''}
+            type="supplier"
+            onSelect={(value) => setSupplier(value)}
+            options={supplierOptions}
           />
-
           <View style={styles.switchRow}>
             <Text>Days before expiration</Text>
             <Switch
-              value={expireAlert}
+              value={notifyEnabled}
               onValueChange={(value) => {
-                setExpireAlert(value)
-                if (!value) setExpireDays('')
+                setNotifyEnabled(value)
+                if (!value) {
+                  setNotifyDays('')   // 🔥 เคลียร์ค่าทันทีเมื่อปิด switch
+                }
               }}
             />
           </View>
 
-          {expireAlert && (
+          {notifyEnabled && (
             <TextInput
               style={styles.input}
               keyboardType="numeric"
-              value={expireDays}
-              onChangeText={setExpireDays}
+              value={notifyDays}
+              onChangeText={setNotifyDays}
               placeholder="Enter days before expiration"
             />
           )}

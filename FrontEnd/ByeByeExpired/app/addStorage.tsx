@@ -61,14 +61,14 @@ export default function AddStorageScreen() {
     }
 
     try {
-      await createStorage(token, currentLocation.id, {
+      const newStorage = await createStorage(token, currentLocation.id, {
         name: storageName,
         icon: selectedIcon,
         color: selectedColor,
       })
 
-      Alert.alert('Success', 'Storage created')
       router.back()
+      Alert.alert('Success', 'Storage created')
     } catch (err: any) {
       console.log('CREATE STORAGE FULL ERROR:', err)
       Alert.alert('Error', JSON.stringify(err))

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// app/allProduct.tsx
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,10 +9,12 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { getProducts } from "../src/api/product.api";
+import { supabase } from "../src/supabase";
 
 const TABS = [
   "All",
@@ -22,66 +25,64 @@ const TABS = [
   "Beverages",
 ];
 
-type Product = {
-  id: string;
-  name: string;
-  qty: string;
-  exp: string;
-  img: string;
+const CATEGORY_MAP: Record<string, string> = {
+  "Vegetables & Fruits": "veg",
+  "Meat & Poultry": "meat",
+  "Egg & Dairy": "egg",
+  "Processed Foods": "processed",
+  "Beverages": "drink",
 };
-const PRODUCTS = [
-  {
-    id: "1",
-    name: "ไข่ไก่สด เบอร์ 2 แพ็ค 30 ฟอง",
-    qty: "1 piece",
-    exp: "7 JAN 2026",
-    img: "https://via.placeholder.com/150",
-  },
-  {
-    id: "2",
-    name: "หมูสับสด",
-    qty: "1 piece",
-    exp: "7 JAN 2026",
-    img: "https://via.placeholder.com/150",
-  },
-  {
-    id: "3",
-    name: "สันคอหมูสด",
-    qty: "3 piece",
-    exp: "8 JAN 2026",
-    img: "https://via.placeholder.com/150",
-  },
-  {
-    id: "4",
-    name: "บะหมี่กึ่งสำเร็จรูป",
-    qty: "6 piece",
-    exp: "9 JAN 2026",
-    img: "https://via.placeholder.com/150",
-  },
-  {
-    id: "5",
-    name: "บะหมี่กึ่งสำเร็จรูป",
-    qty: "6 piece",
-    exp: "9 JAN 2026",
-    img: "https://via.placeholder.com/150",
-  },
-];
+
 
 export default function AllProductScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("All");
 
   const [sortAsc, setSortAsc] = useState(true);
+  const [products, setProducts] = useState<any[]>([]);
+  const { locationId } = useLocalSearchParams()
+
   const parseDate = (dateStr: string): number => {
     return new Date(dateStr).getTime();
   };
-  const sortedProducts = [...PRODUCTS].sort((a, b) => {
-    const dateA = parseDate(a.exp);
-    const dateB = parseDate(b.exp);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchProducts = async () => {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          if (!session) return;
+
+          const data = await getProducts(locationId as string);
+          setProducts(data);
+        } catch (error) {
+          console.log("Fetch products error:", error);
+        }
+      };
+
+      fetchProducts();
+    }, [locationId])
+  );
+
+  const filteredProducts =
+    activeTab === "All"
+      ? products
+      : products.filter((item: any) => {
+          const categoryValue =
+            item.product_templates?.category || item.category;
+          return categoryValue === CATEGORY_MAP[activeTab];
+        });
+
+  const sortedProducts = [...filteredProducts].sort((a: any, b: any) => {
+    const dateA = parseDate(a.expiration_date);
+    const dateB = parseDate(b.expiration_date);
 
     return sortAsc
-      ? dateA - dateB   // ใกล้หมดอายุขึ้นก่อน
-      : dateB - dateA;  // หมดอายุช้าที่สุดขึ้นก่อน
+      ? dateA - dateB
+      : dateB - dateA;
   });
 
   return (
@@ -91,7 +92,7 @@ export default function AllProductScreen() {
       end={{ x: 0, y: 1 }}
       style={{ flex: 1 }}
     >
-      <SafeAreaView style={{ flex: 1  ,paddingHorizontal: 16, paddingTop: 8}}>
+      <SafeAreaView style={{ flex: 1, paddingHorizontal: 16, paddingTop: 8 }}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -144,14 +145,27 @@ export default function AllProductScreen() {
             contentContainerStyle={{
               paddingBottom: 20,
             }}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <Image source={{ uri: item.img }} style={styles.img} />
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.qty}>{item.qty}</Text>
-                <Text style={styles.exp}>EXP : {item.exp}</Text>
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const imageUrl =
+                item.product_templates?.image_url ||
+                "https://via.placeholder.com/150";
+
+              return (
+                <View style={styles.card}>
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.img}
+                  />
+                  <Text style={styles.name}>
+                    {item.product_templates?.name || item.name}
+                  </Text>
+                  <Text style={styles.qty}>Qty: {item.quantity}</Text>
+                  <Text style={styles.exp}>
+                    EXP : {new Date(item.expiration_date).toDateString()}
+                  </Text>
+                </View>
+              );
+            }}
           />
         </View>
         <TouchableOpacity

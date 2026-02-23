@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -22,6 +22,7 @@ import { createSupplier } from '../src/api/supplier.api'
 
 export default function AddSupplierScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: '',
@@ -118,8 +119,8 @@ export default function AddSupplierScreen() {
         imageUrl = await uploadImageToSupabase(imageUri, user.id)
       }
 
-      // ⭐ เรียกผ่าน API แทน insert ตรง ๆ
-      await createSupplier({
+      // ✅ เก็บ result ที่ return กลับมา
+      const newSupplier = await createSupplier({
         company_name: form.name,
         phone: form.phone,
         address: form.address,
@@ -131,6 +132,7 @@ export default function AddSupplierScreen() {
 
       Alert.alert('สำเร็จ', 'เพิ่ม Supplier เรียบร้อย')
       router.back()
+
     } catch (error: any) {
       console.log(error.message)
       Alert.alert('เกิดข้อผิดพลาด', error.message ?? 'ไม่สามารถบันทึกข้อมูลได้')
@@ -184,6 +186,7 @@ export default function AddSupplierScreen() {
               />
               <Input
                 label="เบอร์โทรศัพท์ *"
+                keyboardType="numeric"
                 value={form.phone}
                 onChangeText={(value) => handleChange('phone', value)}
               />
@@ -222,15 +225,17 @@ type InputProps = {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
+  keyboardType?: React.ComponentProps<typeof TextInput>['keyboardType'];
 };
 
-const Input = ({ label, value, onChangeText }: InputProps) => (
+const Input = ({ label, value, onChangeText, keyboardType }: InputProps) => (
   <View style={styles.inputWrapper}>
     <Text style={styles.inputLabel}>{label}</Text>
     <TextInput
       style={styles.input}
       value={value}
       onChangeText={onChangeText}
+      keyboardType={keyboardType}
       placeholder=""
       placeholderTextColor="#B1A0C8"
     />

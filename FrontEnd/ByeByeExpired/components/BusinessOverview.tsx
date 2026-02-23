@@ -421,31 +421,61 @@ export default function BusinessOverview({ location }: { location: Location }) {
         <View style={styles.bottomBackground} />
 
         <View style={styles.bottomNav}>
-          <TouchableOpacity onPress={() => router.push("/allProduct")}>
-            <Image
-              source={require("../assets/images/button1.png")}
-              style={{ width: 22, height: 22 }}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/NearlyExpired")}>
-            <Image
-              source={require("../assets/images/button2.png")}
-              style={{ width: 27, height: 27 }}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/Expired")}>
-            <Image
-              source={require("../assets/images/button3.png")}
-              style={{ width: 27, height: 27 }}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/profile")}>
-            <Image
-              source={require("../assets/images/button4.png")}
-              style={{ width: 22, height: 22 }}
+          <View style={styles.bottomNav}>
+            <TouchableOpacity
+              onPress={() =>
+                router.replace({
+                  pathname: "/allProduct",
+                  params: {
+                    locationId: location.id,
+                    context: location.type,
+                  },
+                })
+              }
+            >
+              < Image source={require("../assets/images/button1.png")}
+                style={{ width: 22, height: 22 }}
+              />
+            </TouchableOpacity>
 
-            />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() =>
+                router.replace({
+                  pathname: "/NearlyExpired",
+                  params: {
+                    locationId: location.id,
+                    context: location.type,
+                  },
+                })
+              }
+            >
+              <Image source={require("../assets/images/button2.png")}
+                style={{ width: 27, height: 27 }}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() =>
+                router.replace({
+                  pathname: "/Expired",
+                  params: {
+                    locationId: location.id,
+                    context: location.type,
+                  },
+                })
+              }
+            >
+              <Image source={require("../assets/images/button3.png")}
+                style={{ width: 27, height: 27 }}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => router.replace("/profile")}>
+              <Image source={require("../assets/images/button4.png")}
+                style={{ width: 22, height: 22 }}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 

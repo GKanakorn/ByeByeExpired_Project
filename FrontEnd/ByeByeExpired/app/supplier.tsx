@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 import { getSuppliers } from '../src/api/supplier.api'
 import { useFocusEffect } from '@react-navigation/native'
 import { useCallback } from 'react'
+import { supabase } from '@/src/supabase';
 
 //Define the Supplier
 interface Supplier {
@@ -40,7 +41,12 @@ export default function SupplierScreen() {
   );
   const fetchSuppliers = async () => {
     try {
-      const data = await getSuppliers()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) return
+      const data = await getSuppliers(session.access_token)
 
       const formatted = data.map((item: any) => ({
         id: item.id,

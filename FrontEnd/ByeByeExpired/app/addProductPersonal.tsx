@@ -23,7 +23,6 @@ import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
 import { supabase } from '../src/supabase'
 import { getStoragesByLocation } from '../src/api/storage.api'
-import { deleteStorage } from '../src/api/storage.api'
 import * as ImageManipulator from 'expo-image-manipulator'
 
 interface Option {
@@ -299,6 +298,7 @@ export default function AddProductScreen() {
 
                 return (
                   <TouchableOpacity
+                    key={item.value}
                     style={[
                       styles.dropdownItem,
                       value === item.value && styles.dropdownItemActive
@@ -333,7 +333,7 @@ export default function AddProductScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
-              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
+              <Text style={styles.headerBtn}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
@@ -386,11 +386,7 @@ export default function AddProductScreen() {
             value={storage}
             type="storage"
             onSelect={setStorage}
-            options={[
-              { label: 'Freezer', value: 'freezer' },
-              { label: 'Fridge', value: 'fridge' },
-              { label: 'Dry Food', value: 'dry_food' }
-            ]}
+            options={storageOptions}
           />
 
           <Text style={styles.label}>Storage Date</Text>

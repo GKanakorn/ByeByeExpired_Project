@@ -14,6 +14,11 @@ export async function createProduct(userId: string, payload: any) {
     notifyEnabled,
     notifyBeforeDays,
     quantity,
+
+    price,
+    store,
+    lowStockEnabled,
+    lowStockThreshold,
   } = payload
 
   // ===============================
@@ -106,6 +111,12 @@ export async function createProduct(userId: string, payload: any) {
         notify_before_days: notifyBeforeDays,
         notify_at: notifyDate,
         quantity,
+
+        // 🔥 Business fields
+        price: price ?? null,
+        store: store ?? null,
+        low_stock_enabled: lowStockEnabled ?? false,
+        low_stock_threshold: lowStockThreshold ?? null,
       })
       .select()
       .single()
@@ -135,22 +146,24 @@ export async function getOverview(userId: string, locationId: string) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const threeDaysLater = new Date()
-  threeDaysLater.setHours(0, 0, 0, 0)
-  threeDaysLater.setDate(threeDaysLater.getDate() + 3)
+  const nearlyExpired: any[] = []
+  const expired: any[] = []
 
-  const nearlyExpired = (items || []).filter((item: any) => {
-    if (!item.expiration_date) return false
+  ;(items || []).forEach((item: any) => {
+    if (!item.expiration_date) return
+
     const exp = new Date(item.expiration_date)
     exp.setHours(0, 0, 0, 0)
-    return exp >= today && exp <= threeDaysLater
-  })
 
-  const expired = (items || []).filter((item: any) => {
-    if (!item.expiration_date) return false
-    const exp = new Date(item.expiration_date)
-    exp.setHours(0, 0, 0, 0)
-    return exp < today
+    const diff = Math.floor(
+      (exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    if (diff < 0) {
+      expired.push(item)
+    } else if (diff <= 7) {
+      nearlyExpired.push(item)
+    }
   })
 
   return {
@@ -313,4 +326,79 @@ export async function getProductById(
   }
 
   return data
+}
+
+export async function getExpiredProducts(
+  userId: string,
+  locationId: string
+) {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select(`
+      *,
+      product_templates (
+        name,
+        image_url,
+        category
+      )
+    `)
+    .eq('owner_id', userId)
+    .eq('location_id', locationId)
+    .order('expiration_date', { ascending: true })
+
+  if (error) throw error
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const expired = (data || []).filter((item: any) => {
+    if (!item.expiration_date) return false
+
+    const exp = new Date(item.expiration_date)
+    exp.setHours(0, 0, 0, 0)
+
+    return exp < today
+  })
+
+  return expired
+}
+
+export async function getNearlyExpiredProducts(
+  userId: string,
+  locationId: string
+) {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select(`
+      *,
+      product_templates (
+        name,
+        image_url,
+        category
+      )
+    `)
+    .eq('owner_id', userId)
+    .eq('location_id', locationId)
+    .order('expiration_date', { ascending: true })
+
+  if (error) throw error
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const nearlyExpired = (data || []).filter((item: any) => {
+    if (!item.expiration_date) return false
+
+    const exp = new Date(item.expiration_date)
+    exp.setHours(0, 0, 0, 0)
+
+    const diff = Math.floor(
+      (exp.getTime() - today.getTime()) /
+        (1000 * 60 * 60 * 24)
+    )
+
+    return diff >= 0 && diff <= 7
+  })
+
+  return nearlyExpired
 }
