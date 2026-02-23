@@ -38,6 +38,11 @@ export default function DevTestScreen() {
           title="ไปหน้า ShowdetailBusiness"
           onPress={() => router.push('/showDetailBusiness')}
         />
+      </View> <View style={styles.buttonWrapper}>
+        <Button
+          title="ไปหน้า ShowdetailPersonal"
+          onPress={() => router.push('/showDetailPersonal')}
+        />
       </View>
       <View style={styles.buttonWrapper}>
         <Button

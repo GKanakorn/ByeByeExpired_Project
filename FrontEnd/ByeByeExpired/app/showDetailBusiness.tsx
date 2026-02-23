@@ -12,93 +12,188 @@ import {
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import React from 'react'
+import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router'
+import { createProduct } from '../src/api/product.api';
+import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
-
 import { supabase } from '../src/supabase'
+import { getStoragesByLocation } from '../src/api/storage.api'
 
 interface Option {
   label: string;
   value: string;
 }
 
-export default function ProductDetailScreen() {
+interface DropdownProps {
+  label: string;
+  value: string;
+  options: Option[];
+  onSelect: (value: string) => void;
+  type: string;
+}
 
+export default function AddProductScreen() {
   const router = useRouter();
 
+  const params = useLocalSearchParams()
+  const barcode = Array.isArray(params.barcode) ? params.barcode[0] : params.barcode
+  const template = Array.isArray(params.template) ? params.template[0] : params.template
+  const locationIdParam = Array.isArray(params.locationId)
+    ? params.locationId[0]
+    : params.locationId
+
+  const product = template
+    ? JSON.parse(template as string)
+    : null
+  const locationId = locationIdParam as string | undefined
+
   const [name, setName] = useState('')
-  const [category, setCategory] = useState('')
-  const [storage, setStorage] = useState('')
-  const [store, setStore] = useState('')
   const [image, setImage] = useState<string | null>(null)
-  const [quantity, setQuantity] = useState('')
-  const [price, setPrice] = useState('')
-  const [expireAlert, setExpireAlert] = useState(false)
-  const [expireDays, setExpireDays] = useState('')
-  const [lowStock, setLowStock] = useState(false)
-  const [lowStockThreshold, setLowStockThreshold] = useState('')
-  const [storageDate, setStorageDate] = useState(new Date())
-  const [expireDate, setExpireDate] = useState(new Date())
-  const [showStorage, setShowStorage] = useState(false)
-  const [showExpire, setShowExpire] = useState(false)
-  const [tempDate, setTempDate] = useState(new Date())
-
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-
-  const categoryOptions: Option[] = [
-    { label: 'Vegetables & Fruits', value: 'veg' },
-    { label: 'Meat & Poultry', value: 'meat' },
-    { label: 'Eggs & Dairy', value: 'egg' },
-    { label: 'Processed Foods', value: 'processed' },
-    { label: 'Beverages', value: 'drink' }
-  ];
-
-  const storageOptions: Option[] = [
+  const [uploading, setUploading] = useState(false)
+  const [category, setCategory] = useState('');
+  const [storage, setStorage] = useState('');
+  const [storageOptions] = useState<Option[]>([
     { label: 'Freezer', value: 'freezer' },
     { label: 'Fridge', value: 'fridge' },
-    { label: 'Dry Food', value: 'Dry Food' }
-  ];
+    { label: 'Dry Food', value: 'dry_food' },
+  ])
 
-  const storeOptions: Option[] = [
-    { label: 'Makro', value: 'makro' },
-    { label: "Lotus's", value: 'lotus' },
-    { label: 'Big C', value: 'bigc' }
-  ];
+  const [storageDate, setStorageDate] = useState(new Date());
+  const [expireDate, setExpireDate] = useState(new Date());
 
-  const Dropdown = ({
-    label,
-    value,
-    options,
-    onSelect,
-    type
-  }: {
-    label: string;
-    value: string;
-    options: Option[];
-    onSelect: (value: string) => void;
-    type: string;
-  }) => {
+  const [tempDate, setTempDate] = useState(new Date());
+
+  const [showStorage, setShowStorage] = useState(false);
+  const [showExpire, setShowExpire] = useState(false);
+  const [quantity, setQuantity] = useState<string>('')
+  const [notifyEnabled, setNotifyEnabled] = useState(false)
+  const [notifyDays, setNotifyDays] = useState('')
+  const [store, setStore] = useState('');
+  const [lowStock, setLowStock] = useState(true);
+  const [expireAlert, setExpireAlert] = useState(false)
+  const [price, setPrice] = useState<string>('')
+  const [lowStockThreshold, setLowStockThreshold] = useState<string>('')
+  const [expireDays, setExpireDays] = useState<string>('')
+  const handleSave = async () => {
+    try {
+      setUploading(true)
+
+      const quantityNumber = Number(quantity)
+      const priceNumber = Number(price)
+
+      if (!quantityNumber || quantityNumber <= 0) {
+        Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
+        setUploading(false)
+        return
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        Alert.alert('Error', 'User not logged in')
+        return
+      }
+
+      await createProduct({
+        userId: user.id,
+        barcode: barcode || '',
+        templateId: null,
+        name,
+        category,
+        storage,
+        locationId: locationId ?? '',
+        storageDate,
+        expireDate,
+        quantity: quantityNumber,
+        imageUrl: image,
+        price: priceNumber || null,
+        store,
+        lowStockEnabled: lowStock,
+        notifyEnabled: expireAlert,
+        lowStockThreshold: lowStock ? Number(lowStockThreshold) : null,
+        notifyBeforeDays: expireAlert ? Number(expireDays) : null,
+      })
+
+      Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
+      router.replace('/overview')
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Save failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (product) {
+      setName(product.name ?? '')
+      setCategory(product.category ?? '')
+      setImage(product.image_url ?? null)
+    }
+  }, [])
+
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const handleCancel = () => {
+    router.replace('/overview')
+  }
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'ต้องอนุญาตเข้าถึงรูป')
+      return
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    })
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri)
+    }
+  }
+  const Dropdown = ({ label, value, options, onSelect, type }: DropdownProps) => {
     const selectedLabel =
-      options.find((o) => o.value === value)?.label || label;
+      options.find((o: Option) => o.value === value)?.label || label;
 
     return (
       <>
         <TouchableOpacity
           style={[
-            styles.inputIcon,
+            styles.customDropdown,
             openDropdown === type && styles.dropdownActive
           ]}
           onPress={() =>
             setOpenDropdown(openDropdown === type ? null : type)
           }
         >
-          <Text style={{ color: value ? '#333' : '#999' }}>
+          <Text
+            style={[
+              styles.dropdownText,
+              value && styles.dropdownTextActive
+            ]}
+          >
             {selectedLabel}
           </Text>
-          <Ionicons name="chevron-down" size={20} />
+
+          <Ionicons
+            name="chevron-down"
+            size={20}
+            color="#666"
+            style={{
+              transform: [
+                { rotate: openDropdown === type ? '180deg' : '0deg' }
+              ]
+            }}
+          />
         </TouchableOpacity>
 
         <Modal transparent visible={openDropdown === type} animationType="fade">
@@ -108,7 +203,7 @@ export default function ProductDetailScreen() {
             onPress={() => setOpenDropdown(null)}
           >
             <View style={styles.dropdownModal}>
-              {options.map((item) => (
+              {options.map((item: Option) => (
                 <TouchableOpacity
                   key={item.value}
                   style={[
@@ -116,14 +211,24 @@ export default function ProductDetailScreen() {
                     value === item.value && styles.dropdownItemActive
                   ]}
                   onPress={() => {
-                    onSelect(item.value);
                     setOpenDropdown(null);
+
+                    if (item.value === '__add_new__') {
+                      router.push({
+                        pathname: '/addStorage',
+                        params: { locationId: locationId ?? '' },
+                      });
+                      return;
+                    }
+
+                    onSelect(item.value);
                   }}
                 >
                   <Text
                     style={[
                       styles.dropdownItemText,
-                      value === item.value && styles.dropdownItemTextActive
+                      value === item.value &&
+                      styles.dropdownItemTextActive
                     ]}
                   >
                     {item.label}
@@ -137,105 +242,87 @@ export default function ProductDetailScreen() {
     );
   };
 
-
-  // ================= SAVE =================
-  const handleUpdate = async () => {
-    Alert.alert('Saved', 'ข้อมูลถูกบันทึก (Demo)')
-    router.back()
-  }
-
-  // ================= DELETE =================
-  const handleDelete = async () => {
-    Alert.alert(
-      'Confirm Delete',
-      'คุณแน่ใจหรือไม่ว่าต้องการลบสินค้านี้?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย (Demo)')
-            router.back()
-          }
-        }
-      ]
-    )
-  }
-
   return (
-    <LinearGradient colors={['#e8d7ff', '#cfe9f9']} style={styles.bg}>
+    <LinearGradient colors={['#cbd1faff', '#eef4f8ff', '#cfe9f9ff']} style={styles.bg}>
       <ScrollView showsVerticalScrollIndicator={false}>
-
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.headerBtn}>
-                Cancel
-              </Text>
+            <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
+              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity onPress={handleUpdate}>
-              <Text style={styles.headerBtn}>
-                Save
-              </Text>
+            <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
+              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Save</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>Detail Of Product</Text>
+          <Text style={styles.headerTitle}>Detail Of Product</Text>
 
-          <View style={styles.imageBox}>
-            {image && (
-              <Image source={{ uri: image }} style={styles.image} />
+          <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
+            {image ? (
+              <Image
+                source={{ uri: image }}
+                style={{ width: 120, height: 120, borderRadius: 8 }}
+              />
+            ) : (
+              <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
             )}
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
-
           <Text style={styles.label}>Name</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} />
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+          />
 
           <Text style={styles.label}>Category</Text>
           <Dropdown
             label="Select Category"
             value={category}
-            options={categoryOptions}
-            onSelect={setCategory}
             type="category"
+            onSelect={setCategory}
+            options={[
+              { label: 'Vegetables & Fruits', value: 'veg' },
+              { label: 'Meat & Poultry', value: 'meat' },
+              { label: 'Eggs & Dairy', value: 'egg' },
+              { label: 'Processed Foods', value: 'processed' },
+              { label: 'Beverages', value: 'drink' }
+            ]}
           />
 
           <Text style={styles.label}>Storage</Text>
           <Dropdown
             label="Select Storage"
             value={storage}
-            options={storageOptions}
-            onSelect={setStorage}
             type="storage"
+            onSelect={setStorage}
+            options={storageOptions}
           />
 
           <Text style={styles.label}>Storage Date</Text>
           <TouchableOpacity
             style={styles.inputIcon}
             onPress={() => {
-              setTempDate(storageDate)
-              setShowStorage(true)
+              setTempDate(storageDate);
+              setShowStorage(true);
             }}
           >
             <Text>{storageDate.toDateString()}</Text>
-            <Ionicons name="calendar-outline" size={20} />
+            <Ionicons name="calendar-outline" size={20} color="#888" />
           </TouchableOpacity>
 
           <Text style={styles.label}>Expiration Date</Text>
           <TouchableOpacity
             style={styles.inputIcon}
             onPress={() => {
-              setTempDate(expireDate)
-              setShowExpire(true)
+              setTempDate(expireDate);
+              setShowExpire(true);
             }}
           >
             <Text>{expireDate.toDateString()}</Text>
-            <Ionicons name="calendar-outline" size={20} />
+            <Ionicons name="calendar-outline" size={20} color="#888" />
           </TouchableOpacity>
 
           <Text style={styles.label}>Quantity</Text>
@@ -258,14 +345,24 @@ export default function ProductDetailScreen() {
           <Dropdown
             label="Select Store"
             value={store}
-            options={storeOptions}
-            onSelect={setStore}
             type="store"
+            onSelect={setStore}
+            options={[
+              { label: 'Makro', value: 'makro' },
+              { label: "Lotus's", value: 'lotus' },
+              { label: 'Big C', value: 'bigc' }
+            ]}
           />
 
           <View style={styles.switchRow}>
             <Text>Days before expiration</Text>
-            <Switch value={expireAlert} onValueChange={setExpireAlert} />
+            <Switch
+              value={expireAlert}
+              onValueChange={(value) => {
+                setExpireAlert(value)
+                if (!value) setExpireDays('')
+              }}
+            />
           </View>
 
           {expireAlert && (
@@ -274,12 +371,19 @@ export default function ProductDetailScreen() {
               keyboardType="numeric"
               value={expireDays}
               onChangeText={setExpireDays}
+              placeholder="Enter days before expiration"
             />
           )}
 
           <View style={styles.switchRow}>
             <Text>Low Stock Alert</Text>
-            <Switch value={lowStock} onValueChange={setLowStock} />
+            <Switch
+              value={lowStock}
+              onValueChange={(value) => {
+                setLowStock(value)
+                if (!value) setLowStockThreshold('')
+              }}
+            />
           </View>
 
           {lowStock && (
@@ -288,57 +392,91 @@ export default function ProductDetailScreen() {
               keyboardType="numeric"
               value={lowStockThreshold}
               onChangeText={setLowStockThreshold}
+              placeholder="Enter low stock threshold"
             />
           )}
-
         </View>
-
-        {/* 🔴 DELETE BUTTON */}
-        <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-          <Text style={styles.deleteText}>Delete</Text>
-        </TouchableOpacity>
-
-      </ScrollView>
-
-      {/* Calendar Modal */}
-      <Modal transparent visible={showStorage || showExpire}>
         <TouchableOpacity
-          style={styles.overlay}
+          style={styles.deleteButton}
+          activeOpacity={0.85}
           onPress={() => {
-            setShowStorage(false)
-            setShowExpire(false)
+            Alert.alert(
+              'Delete Product',
+              'คุณต้องการลบสินค้านี้หรือไม่?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => {
+                    Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
+                    router.replace('/overview')
+                  }
+                }
+              ]
+            )
           }}
         >
-          <View style={styles.calendarBox}>
+          <Text style={styles.deleteButtonText}>Delete</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      {/* ===== CALENDAR MODAL ===== */}
+      <Modal transparent animationType="fade" visible={showStorage || showExpire}>
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => {
+            setShowStorage(false);
+            setShowExpire(false);
+          }}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.calendarBox}>
             <DateTimePicker
               value={tempDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-              onChange={(e, d) => d && setTempDate(d)}
-            />
-            <TouchableOpacity
-              onPress={() => {
-                if (showStorage) setStorageDate(tempDate)
-                if (showExpire) setExpireDate(tempDate)
-                setShowStorage(false)
-                setShowExpire(false)
+              accentColor="#5B5FC7"
+              themeVariant="light"
+              onChange={(e: any, d?: Date) => {
+                if (d) setTempDate(d);
               }}
-            >
-              <Text style={{ textAlign: 'right', marginTop: 10 }}>OK</Text>
-            </TouchableOpacity>
-          </View>
+            />
+
+            <View style={styles.calendarActions}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowStorage(false);
+                  setShowExpire(false);
+                }}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (showStorage) setStorageDate(tempDate);
+                  if (showExpire) setExpireDate(tempDate);
+                  setShowStorage(false);
+                  setShowExpire(false);
+                }}
+              >
+                <Text style={styles.okText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     </LinearGradient>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   bg: { flex: 1 },
 
   header: {
-    paddingTop: 60,
-    paddingHorizontal: 24
+    paddingTop: 50,
+    paddingHorizontal: 24,
+    paddingBottom: 20
   },
 
   headerTop: {
@@ -346,49 +484,55 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
 
-  headerBtn: {
-    fontSize: 16,
-    color: '#444',
-    fontWeight: 'bold'
-  },
-
-  title: {
-    textAlign: 'center',
+  headerTitle: {
+    marginTop: 10,
     fontSize: 22,
     fontWeight: 'bold',
-    marginTop: 10,
-    color: '#5B5FC7'
+    color: '#5B5FC7',
+    textAlign: 'center'
+  },
+
+  headerBtn: {
+    fontSize: 16,
+    color: '#333'
   },
 
   imageBox: {
-    marginTop: 20,
+    marginTop: 16,
     alignSelf: 'center',
-    width: 120,
-    height: 120,
+    width: 110,
+    height: 110,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
     elevation: 4
   },
 
-  image: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 20
+  imageText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#999'
   },
 
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 30,
     padding: 20,
     margin: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
     elevation: 5
   },
 
   label: {
-    marginTop: 10,
-    marginBottom: 5
+    marginTop: 12,
+    marginBottom: 5,
+    color: '#555'
   },
 
   input: {
@@ -408,41 +552,38 @@ const styles = StyleSheet.create({
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 15
-  },
-
-  deleteBtn: {
-    backgroundColor: '#FF4D4F',
-    marginHorizontal: 40,
-    marginBottom: 40,
-    paddingVertical: 15,
-    borderRadius: 30,
-    alignItems: 'center'
-  },
-
-  deleteText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(34,34,34,0.35)',
     justifyContent: 'center',
     alignItems: 'center'
   },
 
-  calendarBox: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 16,
-    width: '90%'
+  customDropdown: {
+    backgroundColor: '#F2F2F2',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
 
   dropdownActive: {
     borderWidth: 2,
     borderColor: '#A7C7FF'
+  },
+
+  dropdownText: {
+    color: '#999'
+  },
+
+  dropdownTextActive: {
+    color: '#565555ff',
+    fontWeight: '500'
   },
 
   dropdownModal: {
@@ -468,6 +609,47 @@ const styles = StyleSheet.create({
 
   dropdownItemTextActive: {
     fontWeight: 'bold',
-    color: '#5B5FC7'
+    color: '#91a7f0ff'
   },
-})
+  calendarBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 16,
+    width: '90%'
+  },
+
+  calendarActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10
+  },
+
+  cancelText: {
+    marginRight: 20,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4d70e2ff'
+  },
+
+  okText: {
+    fontSize: 16,
+    marginRight: 20,
+    fontWeight: 'bold',
+    color: '#5e42fbff'
+  },
+
+  deleteButton: {
+    backgroundColor: '#FF4D4F',
+    marginHorizontal: 40,
+    marginBottom: 40,
+    paddingVertical: 14,
+    borderRadius: 30,
+    alignItems: 'center'
+  },
+
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold'
+  },
+});

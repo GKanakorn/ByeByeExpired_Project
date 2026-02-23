@@ -333,7 +333,7 @@ export default function AddProductScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
-              <Text style={styles.headerBtn}>Cancel</Text>
+              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
@@ -386,7 +386,11 @@ export default function AddProductScreen() {
             value={storage}
             type="storage"
             onSelect={setStorage}
-            options={storageOptions}
+            options={[
+              { label: 'Freezer', value: 'freezer' },
+              { label: 'Fridge', value: 'fridge' },
+              { label: 'Dry Food', value: 'dry_food' }
+            ]}
           />
 
           <Text style={styles.label}>Storage Date</Text>
