@@ -52,7 +52,7 @@ export async function createProduct(payload: {
 
   // Business (optional)
   price?: number | null
-  store?: string | null
+  supplierId?: string | null
   lowStockEnabled?: boolean
   lowStockThreshold?: number | null
 }) {
@@ -161,6 +161,31 @@ export async function getProducts(locationId: string) {
   return res.json()
 }
 
+/* ===============================
+   4️⃣ get product by id
+================================ */
+export async function getProductById(productId: string) {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(
+    `${API_URL}/products/${productId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Get product failed')
+  }
+
+  return res.json()
+}
 
 /* ===============================
    4️⃣ get expired products
@@ -209,6 +234,51 @@ export async function getNearlyExpiredProducts(locationId: string) {
   if (!res.ok) {
     const err = await res.json()
     throw new Error(err.message || 'Get nearly expired products failed')
+  }
+
+  return res.json()
+}
+
+export const updateProduct = async (
+  productId: string,
+  payload: any
+) => {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(`${API_URL}/products/${productId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    throw new Error('Update product failed')
+  }
+
+  return res.json()
+}
+
+export const deleteProduct = async (productId: string) => {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(`${API_URL}/products/${productId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error('Delete product failed')
   }
 
   return res.json()

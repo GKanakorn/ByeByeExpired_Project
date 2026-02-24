@@ -18,12 +18,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router'
-import { createProduct } from '../src/api/product.api';
+import { createProduct, getProductById } from '../src/api/product.api';
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
 import { supabase } from '../src/supabase'
 import { getStoragesByLocation } from '../src/api/storage.api'
-import { deleteStorage } from '../src/api/storage.api'
+import { updateProduct, deleteProduct } from '../src/api/product.api';
 import * as ImageManipulator from 'expo-image-manipulator'
 
 interface Option {
@@ -39,22 +39,16 @@ interface DropdownProps {
   type: string;
 }
 
-export default function AddProductScreen() {
+export default function showDetailPersonal() {
   const router = useRouter();
 
   const {
-    barcode,
-    template,
+    productId,
     locationId,
   } = useLocalSearchParams<{
-    barcode: string
-    template: string
+    productId: string
     locationId: string
   }>()
-
-  const product = template
-    ? JSON.parse(template as string)
-    : null
 
   const [name, setName] = useState('')
   const [image, setImage] = useState<string | null>(null)
@@ -75,12 +69,38 @@ export default function AddProductScreen() {
   const [notifyDays, setNotifyDays] = useState('')
 
   useEffect(() => {
-    if (product) {
-      setName(product.name ?? '')
-      setCategory(product.category ?? '')
-      setImage(product.image_url ?? null)
+    if (!productId) return
+
+    const fetchProduct = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) return
+
+        const data = await getProductById(productId as string)
+
+        setName(data.product_templates?.name ?? '')
+        setCategory(data.product_templates?.category ?? '')
+        setImage(data.product_templates?.image_url ?? null)
+        setQuantity(data.quantity?.toString() ?? '')
+        setStorage(data.storage_id ?? '')
+
+        setStorageDate(new Date(data.storage_date))
+        setExpireDate(new Date(data.expiration_date))
+
+        setNotifyEnabled(data.notify_enabled ?? false)
+        setNotifyDays(data.notify_before_days?.toString() ?? '')
+        console.log("FULL PRODUCT DATA:", data)
+
+      } catch (err) {
+        console.log("FETCH PRODUCT ERROR:", err)
+      }
     }
-  }, [])
+
+    fetchProduct()
+  }, [productId])
 
   useFocusEffect(
     React.useCallback(() => {
@@ -183,6 +203,7 @@ export default function AddProductScreen() {
 
       if (!quantityNumber || quantityNumber <= 0) {
         Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
+        setUploading(false)
         return
       }
 
@@ -195,31 +216,28 @@ export default function AddProductScreen() {
         return
       }
 
-      // ⭐ upload รูปก่อน
-      let imageUrl = image
-
-      if (image && image.startsWith('file')) {
-        imageUrl = await uploadImageToSupabase(image, user.id)
-      }
-
-      // ⭐ แล้วค่อย create product
-      await createProduct({
+      const payload = {
         userId: user.id,
-        barcode: barcode || '',
-        templateId: null,
         name,
         category,
         storage,
-        locationId,
+        locationId: locationId ?? '',
         storageDate,
         expireDate,
+        quantity: quantityNumber,
+        imageUrl: image,
         notifyEnabled,
         notifyBeforeDays: notifyEnabled ? Number(notifyDays) : null,
-        quantity: quantityNumber,
-        imageUrl: imageUrl, // ใส่ตรงนี้
-      })
+      }
+      if (!productId) {
+        Alert.alert('Error', 'ไม่พบ productId')
+        return
+      }
 
-      Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
+      await updateProduct(productId as string, payload)
+      Alert.alert('Success', 'แก้ไขสินค้าเรียบร้อย 🎉')
+      router.replace('/overview')
+
       router.replace('/overview')
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Save failed')
@@ -343,7 +361,9 @@ export default function AddProductScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.headerTitle}>Detail Of Product</Text>
+          <Text style={styles.headerTitle}>
+            Edit Product
+          </Text>
 
           <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
             {image ? (
@@ -386,15 +406,7 @@ export default function AddProductScreen() {
             value={storage}
             type="storage"
             onSelect={setStorage}
-            options={
-              storageOptions.length
-                ? storageOptions
-                : [
-                    { label: 'Freezer', value: 'freezer' },
-                    { label: 'Fridge', value: 'fridge' },
-                    { label: 'Dry Food', value: 'dry_food' }
-                  ]
-            }
+            options={storageOptions}
           />
 
           <Text style={styles.label}>Storage Date</Text>
@@ -464,9 +476,16 @@ export default function AddProductScreen() {
                 {
                   text: 'Delete',
                   style: 'destructive',
-                  onPress: () => {
-                    Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
-                    router.replace('/overview')
+                  onPress: async () => {
+                    if (!productId) return
+
+                    try {
+                      await deleteProduct(productId as string)
+                      Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
+                      router.replace('/overview')
+                    } catch (err: any) {
+                      Alert.alert('Error', err.message || 'Delete failed')
+                    }
                   }
                 }
               ]

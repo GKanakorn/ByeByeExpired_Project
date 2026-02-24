@@ -8,7 +8,9 @@ import {
   getProductsByLocation,
   getProductsByBarcode,
   searchProducts,
-  getProductById
+  getProductById,
+  updateProduct,
+  deleteProduct,
 } from '../services/product.service'
 import { AuthRequest } from '../types/auth-request'
 
@@ -188,6 +190,40 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     console.error('🔥 GET PRODUCT DETAIL ERROR:', err)
     res.status(500).json({
       message: err.message || 'Fetch product detail failed',
+    })
+  }
+})
+
+// ✅ UPDATE PRODUCT
+router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id
+    const productId = req.params.id as string
+
+    const result = await updateProduct(userId, productId, req.body)
+
+    res.json(result)
+  } catch (err: any) {
+    console.error('🔥 UPDATE PRODUCT ERROR:', err)
+    res.status(500).json({
+      message: err.message || 'Update product failed',
+    })
+  }
+})
+
+// ✅ DELETE PRODUCT
+router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id
+    const productId = req.params.id as string
+
+    const result = await deleteProduct(userId, productId)
+
+    res.json(result)
+  } catch (err: any) {
+    console.error('🔥 DELETE PRODUCT ERROR:', err)
+    res.status(500).json({
+      message: err.message || 'Delete product failed',
     })
   }
 })

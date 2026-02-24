@@ -80,3 +80,68 @@ export const deleteStorage = async (
 
   return response.json()
 }
+
+export async function updateStorage(
+  token: string,
+  storageId: string,
+  payload: {
+    name: string
+    icon: string
+    color: string
+  }
+) {
+  const res = await fetch(
+    `${API_URL}/api/storages/${storageId}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  )
+
+  const text = await res.text()
+
+  let data: any
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || data || 'Update storage failed')
+  }
+
+  return data
+}
+export async function getStorageDetail(
+  token: string,
+  storageId: string
+) {
+  const res = await fetch(
+    `${API_URL}/api/storages/${storageId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  const text = await res.text()
+
+  let data: any
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || data || 'Fetch storage detail failed')
+  }
+
+  return data
+}

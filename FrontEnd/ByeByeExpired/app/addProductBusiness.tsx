@@ -118,7 +118,7 @@ export default function AddProductScreen() {
         quantity: quantityNumber,
         imageUrl: image,
         price: priceNumber || null,
-        store,
+        supplierId: supplier,
         lowStockEnabled: lowStock,
         notifyEnabled,
         lowStockThreshold: lowStock ? Number(lowStockThreshold) : null,

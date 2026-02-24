@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from '../src/context/LocationContext'
 import { supabase } from '../src/supabase';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   TextInput,
   ScrollView,
   SafeAreaView,
@@ -14,10 +14,11 @@ import {
   ImageSourcePropType,
   Dimensions
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { createStorage } from '../src/api/storage.api'
+import { getStorageDetail, updateStorage } from '../src/api/storage.api'
 
 const { width } = Dimensions.get('window');
 
@@ -39,39 +40,91 @@ const COLORS = [
 
 export default function AddStorageScreen() {
   const router = useRouter();
-  const [storageName, setStorageName] = useState('Fridge 2');
+  const [storageName, setStorageName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('fridge');
   const [selectedColor, setSelectedColor] = useState('#FFEBCD');
   const { currentLocation } = useLocation()
+  const { storageId } = useLocalSearchParams();
+
+  useEffect(() => {
+    if (storageId) {
+      fetchStorageDetail();
+    }
+  }, [storageId]);
+
+  const fetchStorageDetail = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      const token = session?.access_token
+
+      const data = await getStorageDetail(token!, storageId as string)
+
+      setStorageName(data.name)
+      setSelectedIcon(data.icon)
+      setSelectedColor(data.color)
+    } catch (err) {
+      console.log("FETCH STORAGE DETAIL ERROR:", err)
+    }
+  }
 
   const handleSave = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    const token = session?.access_token
-    if (!token) {
-      Alert.alert('Error', 'Not logged in')
+    if (!storageName.trim()) {
+      Alert.alert("Error", "Storage name is required")
       return
     }
 
     if (!currentLocation) {
-      Alert.alert('Error', 'Please select location first')
+      Alert.alert("Error", "Please select location first")
       return
     }
 
     try {
-      const newStorage = await createStorage(token, currentLocation.id, {
-        name: storageName,
-        icon: selectedIcon,
-        color: selectedColor,
-      })
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        Alert.alert("Error", "Not authenticated")
+        return
+      }
+
+      const token = session.access_token
+
+      if (storageId) {
+        // ✅ UPDATE
+        await updateStorage(
+          token,
+          storageId as string,
+          {
+            name: storageName.trim(),
+            icon: selectedIcon,
+            color: selectedColor,
+          }
+        )
+
+        Alert.alert("Success", "Storage updated")
+      } else {
+        // ✅ CREATE
+        await createStorage(
+          token,
+          currentLocation.id,
+          {
+            name: storageName.trim(),
+            icon: selectedIcon,
+            color: selectedColor,
+          }
+        )
+
+        Alert.alert("Success", "Storage created")
+      }
 
       router.back()
-      Alert.alert('Success', 'Storage created')
     } catch (err: any) {
-      console.log('CREATE STORAGE FULL ERROR:', err)
-      Alert.alert('Error', JSON.stringify(err))
+      console.log("SAVE STORAGE ERROR:", err)
+      Alert.alert("Error", err.message || "Something went wrong")
     }
   }
 
@@ -103,99 +156,104 @@ export default function AddStorageScreen() {
         style={styles.background}
       >
         <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Ionicons name="close" size={20} color="white" />
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Ionicons name="checkmark" size={20} color="white" />
-            <Text style={styles.saveText}>Save</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+              <Ionicons name="close" size={20} color="white" />
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
 
-        {/* Title */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>New Storage</Text>
-          <Text style={styles.subtitle}>Create your storage space</Text>
-        </View>
-
-        {/* Large Icon Display */}
-        <View style={styles.iconDisplayContainer}>
-          {renderSelectedIcon()}
-        </View>
-
-        {/* Form Card */}
-        <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-          <View style={styles.formCard}>
-            
-            {/* Name Section */}
-            <View style={styles.section}>
-              <Text style={styles.label}>📝 Name</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="pricetag-outline" size={20} color="#667eea" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={storageName}
-                  onChangeText={setStorageName}
-                  placeholder="Enter storage name"
-                  placeholderTextColor="#999"
-                />
-              </View>
-            </View>
-
-            {/* Icon Section */}
-            <View style={styles.section}>
-              <Text style={styles.label}>🎨 Icon</Text>
-              <View style={styles.iconRow}>
-                {STORAGE_ICONS.map((iconData) => (
-                  <TouchableOpacity
-                    key={iconData.id}
-                    style={[
-                      styles.iconButton,
-                      selectedIcon === iconData.id && styles.selectedIconButton
-                    ]}
-                    onPress={() => setSelectedIcon(iconData.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Image source={iconData.icon} style={styles.iconImage} />
-                    {selectedIcon === iconData.id && (
-                      <View style={styles.iconCheckBadge}>
-                        <Ionicons name="checkmark" size={10} color="white" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Color Section */}
-            <View style={styles.section}>
-              <Text style={styles.label}>🌈 Color</Text>
-              <View style={styles.colorRow}>
-                {COLORS.map((color, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.colorButton,
-                      { backgroundColor: color },
-                      selectedColor === color && styles.selectedColorButton
-                    ]}
-                    onPress={() => setSelectedColor(color)}
-                    activeOpacity={0.7}
-                  >
-                    {selectedColor === color && (
-                      <Ionicons name="checkmark" size={16} color="white" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Ionicons name="checkmark" size={20} color="white" />
+              <Text style={styles.saveText}>Save</Text>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
+
+          {/* Title */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>
+              {storageId ? "Edit Storage" : "New Storage"}
+            </Text>
+
+            <Text style={styles.subtitle}>
+              {storageId ? "Update your storage" : "Create your storage space"}
+            </Text>
+          </View>
+
+          {/* Large Icon Display */}
+          <View style={styles.iconDisplayContainer}>
+            {renderSelectedIcon()}
+          </View>
+
+          {/* Form Card */}
+          <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+            <View style={styles.formCard}>
+
+              {/* Name Section */}
+              <View style={styles.section}>
+                <Text style={styles.label}>📝 Name</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="pricetag-outline" size={20} color="#667eea" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.textInput}
+                    value={storageName}
+                    onChangeText={setStorageName}
+                    placeholder="Enter storage name"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </View>
+
+              {/* Icon Section */}
+              <View style={styles.section}>
+                <Text style={styles.label}>🎨 Icon</Text>
+                <View style={styles.iconRow}>
+                  {STORAGE_ICONS.map((iconData) => (
+                    <TouchableOpacity
+                      key={iconData.id}
+                      style={[
+                        styles.iconButton,
+                        selectedIcon === iconData.id && styles.selectedIconButton
+                      ]}
+                      onPress={() => setSelectedIcon(iconData.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Image source={iconData.icon} style={styles.iconImage} />
+                      {selectedIcon === iconData.id && (
+                        <View style={styles.iconCheckBadge}>
+                          <Ionicons name="checkmark" size={10} color="white" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Color Section */}
+              <View style={styles.section}>
+                <Text style={styles.label}>🌈 Color</Text>
+                <View style={styles.colorRow}>
+                  {COLORS.map((color, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.colorButton,
+                        { backgroundColor: color },
+                        selectedColor === color && styles.selectedColorButton
+                      ]}
+                      onPress={() => setSelectedColor(color)}
+                      activeOpacity={0.7}
+                    >
+                      {selectedColor === color && (
+                        <Ionicons name="checkmark" size={16} color="white" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </LinearGradient>
     </View>

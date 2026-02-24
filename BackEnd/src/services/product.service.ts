@@ -16,8 +16,8 @@ export async function createProduct(userId: string, payload: any) {
     quantity,
 
     price,
-    store,
     lowStockEnabled,
+    supplierId,
     lowStockThreshold,
   } = payload
 
@@ -114,8 +114,8 @@ export async function createProduct(userId: string, payload: any) {
 
         // 🔥 Business fields
         price: price ?? null,
-        store: store ?? null,
         low_stock_enabled: lowStockEnabled ?? false,
+        supplier_id: supplierId ?? null,
         low_stock_threshold: lowStockThreshold ?? null,
       })
       .select()
@@ -149,22 +149,22 @@ export async function getOverview(userId: string, locationId: string) {
   const nearlyExpired: any[] = []
   const expired: any[] = []
 
-  ;(items || []).forEach((item: any) => {
-    if (!item.expiration_date) return
+    ; (items || []).forEach((item: any) => {
+      if (!item.expiration_date) return
 
-    const exp = new Date(item.expiration_date)
-    exp.setHours(0, 0, 0, 0)
+      const exp = new Date(item.expiration_date)
+      exp.setHours(0, 0, 0, 0)
 
-    const diff = Math.floor(
-      (exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    )
+      const diff = Math.floor(
+        (exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      )
 
-    if (diff < 0) {
-      expired.push(item)
-    } else if (diff <= 7) {
-      nearlyExpired.push(item)
-    }
-  })
+      if (diff < 0) {
+        expired.push(item)
+      } else if (diff <= 7) {
+        nearlyExpired.push(item)
+      }
+    })
 
   return {
     nearlyExpired,
@@ -301,21 +301,27 @@ export async function getProductById(
   const { data, error } = await supabaseAdmin
     .from('products')
     .select(`
-      id,
-      quantity,
-      expiration_date,
-      storage_date,
-      storage_id,
-      note,
-      location_id,
-      product_templates (
-        id,
-        name,
-        category,
-        image_url,
-        barcode
-      )
-    `)
+  id,
+  name,
+  category,
+  quantity,
+  storage_date,
+  expiration_date,
+  storage_id,
+  notify_enabled,
+  notify_before_days,
+  low_stock_enabled,
+  low_stock_threshold,
+  price,
+  supplier_id,
+  product_templates (
+    id,
+    name,
+    image_url,
+    category,
+    barcode
+  )
+`)
     .eq('id', productId)
     .eq('owner_id', userId)
     .single()
@@ -394,11 +400,73 @@ export async function getNearlyExpiredProducts(
 
     const diff = Math.floor(
       (exp.getTime() - today.getTime()) /
-        (1000 * 60 * 60 * 24)
+      (1000 * 60 * 60 * 24)
     )
 
     return diff >= 0 && diff <= 7
   })
 
   return nearlyExpired
+}
+export async function updateProduct(
+  userId: string,
+  productId: string,
+  payload: any
+) {
+  const {
+    name,
+    category,
+    storage,
+    locationId,
+    storageDate,
+    expireDate,
+    quantity,
+    notifyEnabled,
+    notifyBeforeDays,
+    price,
+    supplierId,
+    lowStockEnabled,
+    lowStockThreshold,
+  } = payload
+
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .update({
+      name,
+      category,
+      storage_id: storage,
+      location_id: locationId,
+      storage_date: storageDate,
+      expiration_date: expireDate,
+      quantity,
+      notify_enabled: notifyEnabled,
+      notify_before_days: notifyBeforeDays,
+      price: price ?? null,
+      supplier_id: supplierId ?? null,
+      low_stock_enabled: lowStockEnabled ?? false,
+      low_stock_threshold: lowStockThreshold ?? null,
+    })
+    .eq('id', productId)
+    .eq('owner_id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+
+  return data
+}
+
+export async function deleteProduct(
+  userId: string,
+  productId: string
+) {
+  const { error } = await supabaseAdmin
+    .from('products')
+    .delete()
+    .eq('id', productId)
+    .eq('owner_id', userId)
+
+  if (error) throw error
+
+  return { deleted: true }
 }

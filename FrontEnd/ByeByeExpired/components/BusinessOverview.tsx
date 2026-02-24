@@ -14,13 +14,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native"
 import { supabase } from "../src/supabase"
-import { getStoragesByLocation } from "../src/api/storage.api"
+import { getStoragesByLocation, deleteStorage } from "../src/api/storage.api"
 import { STORAGE_ICON_CONFIG, DEFAULT_STORAGE_ICON } from "../constants/storageIcons";
 import { getOverview, searchProducts } from "../src/api/product.api"
 import 'react-native-gesture-handler'
 import { Swipeable } from 'react-native-gesture-handler'
 import { RectButton } from 'react-native-gesture-handler'
-import { deleteStorage } from '../src/api/storage.api'
 import { Alert } from 'react-native'
 
 type Location = {
@@ -84,10 +83,10 @@ export default function BusinessOverview({ location }: { location: Location }) {
               const token = session?.session?.access_token
               if (!token) return
 
+              // ✅ เรียก API ลบจริง
               await deleteStorage(token, storageId)
 
-              // โหลดใหม่แบบเดียวกับตอน fetch
-              await deleteStorage(token, storageId)
+              // ✅ โหลดใหม่หลังลบ
               await fetchAllData()
 
             } catch (error) {
@@ -99,14 +98,34 @@ export default function BusinessOverview({ location }: { location: Location }) {
     )
   }
   const renderRightActions = (storageId: string) => (
-    <TouchableOpacity
-      style={styles.deleteButton}
-      onPress={() => handleDeleteStorage(storageId)}
-    >
-      <Text style={{ color: "white", fontWeight: "600" }}>
-        Delete
-      </Text>
-    </TouchableOpacity>
+    <View style={{ flexDirection: "row" }}>
+
+      {/* EDIT */}
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={() => {
+          router.push({
+            pathname: "/addStorage",
+            params: { storageId: storageId },
+          })
+        }}
+      >
+        <Text style={{ color: "white", fontWeight: "600" }}>
+          Edit
+        </Text>
+      </TouchableOpacity>
+
+      {/* DELETE */}
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => handleDeleteStorage(storageId)}
+      >
+        <Text style={{ color: "white", fontWeight: "600" }}>
+          Delete
+        </Text>
+      </TouchableOpacity>
+
+    </View>
   );
 
   useFocusEffect(
@@ -229,21 +248,39 @@ export default function BusinessOverview({ location }: { location: Location }) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {nearlyExpired.map((item) => {
               const formatted = new Date(item.expiration_date)
-                .toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
+                .toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
                 })
                 .toUpperCase()
 
               return (
-                <View key={item.id} style={styles.cardNear}>
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.cardNear}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    router.push({
+                      pathname:
+                        location.type === "business"
+                          ? "/showDetailBusiness"
+                          : "/showDetailPersonal",
+                      params: {
+                        productId: item.id,
+                        locationId: location.id,
+                      },
+                    })
+                  }}
+                >
                   <Image
-                    source={{ uri: item.product_templates?.image_url || 'https://via.placeholder.com/60' }}
+                    source={{
+                      uri: item.product_templates?.image_url || 'https://via.placeholder.com/60',
+                    }}
                     style={styles.productImg}
                   />
                   <Text style={styles.cardDateNear}>{formatted}</Text>
-                </View>
+                </TouchableOpacity>
               )
             })}
           </ScrollView>
@@ -270,23 +307,43 @@ export default function BusinessOverview({ location }: { location: Location }) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {expired.map((item) => {
               const formatted = new Date(item.expiration_date)
-                .toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
+                .toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
                 })
                 .toUpperCase()
 
               return (
-                <View key={item.id} style={styles.cardEx}>
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.cardEx}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    router.push({
+                      pathname:
+                        location.type === "business"
+                          ? "/showDetailBusiness"
+                          : "/showDetailPersonal",
+                      params: {
+                        productId: item.id,
+                        locationId: location.id,
+                      },
+                    })
+                  }}
+                >
                   <Image
                     source={{
-                      uri: item.product_templates?.image_url || 'https://via.placeholder.com/60',
+                      uri:
+                        item.product_templates?.image_url ||
+                        "https://via.placeholder.com/60",
                     }}
                     style={styles.productImg}
                   />
-                  <Text style={styles.cardDateEx}>{formatted}</Text>
-                </View>
+                  <Text style={styles.cardDateEx}>
+                    {formatted}
+                  </Text>
+                </TouchableOpacity>
               )
             })}
           </ScrollView>
@@ -403,7 +460,10 @@ export default function BusinessOverview({ location }: { location: Location }) {
                     setSearchResults([])
                     router.push({
                       pathname: "/showDetailBusiness",
-                      params: { productId: item.id }
+                      params: {
+                        productId: item.id,
+                        locationId: location.id
+                      }
                     })
                   }}
                 >
@@ -855,7 +915,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginVertical: 5,
   },
-
+  editButton: {
+    backgroundColor: "#4CAF50",
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    borderRadius: 12,
+    marginVertical: 5,
+  },
   deleteText: {
     color: 'white',
     fontWeight: 'bold',

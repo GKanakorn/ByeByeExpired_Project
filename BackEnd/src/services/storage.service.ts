@@ -59,3 +59,37 @@ export async function deleteStorage(
 
   return { success: true }
 }
+
+export async function updateStorage(
+  storageId: string,
+  data: {
+    name: string
+    icon: string
+    color: string
+  }
+) {
+  const { data: result, error } = await supabaseAdmin
+    .from('storages')
+    .update({
+      name: data.name,
+      icon: data.icon,
+      color: data.color,
+    })
+    .eq('id', storageId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return result
+}
+
+export async function getStorageById(storageId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('storages')
+    .select('*')
+    .eq('id', storageId)
+    .single()
+
+  if (error) throw error
+  return data
+}
