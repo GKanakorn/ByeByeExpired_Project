@@ -24,6 +24,7 @@ import { Image } from 'react-native'
 import { getStoragesByLocation } from '../src/api/storage.api'
 import { supabase } from '../src/supabase'
 import { getSuppliers } from '@/src/api/supplier.api';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 
 
@@ -82,57 +83,6 @@ export default function AddProductScreen() {
   const [supplierOptions, setSupplierOptions] = useState<Option[]>([])
   const [supplier, setSupplier] = useState<string | null>(null)
 
-
-  const handleSave = async () => {
-    try {
-      setUploading(true)
-
-      const quantityNumber = Number(quantity)
-      const priceNumber = Number(price)
-
-      if (!quantityNumber || quantityNumber <= 0) {
-        Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
-        setUploading(false)
-        return
-      }
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        Alert.alert('Error', 'User not logged in')
-        return
-      }
-
-      await createProduct({
-        userId: user.id,
-        barcode: barcode || '',
-        templateId: null,
-        name,
-        category,
-        storage,
-        locationId: locationId ?? '',
-        storageDate,
-        expireDate,
-        quantity: quantityNumber,
-        imageUrl: image,
-        price: priceNumber || null,
-        supplierId: supplier,
-        lowStockEnabled: lowStock,
-        notifyEnabled,
-        lowStockThreshold: lowStock ? Number(lowStockThreshold) : null,
-        notifyBeforeDays: notifyEnabled ? Number(notifyDays) : null,
-      })
-
-      Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
-      router.replace('/overview')
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Save failed')
-    } finally {
-      setUploading(false)
-    }
-  }
 
   useEffect(() => {
     if (product) {
@@ -231,6 +181,104 @@ export default function AddProductScreen() {
       setImage(result.assets[0].uri)
     }
   }
+  const uploadImageToSupabase = async (uri: string, userId: string) => {
+    try {
+      // ⭐ แปลงภาพเป็น JPG ก่อน (ตัด transparency ทิ้ง)
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [],
+        {
+          compress: 0.9,
+          format: ImageManipulator.SaveFormat.JPEG, // 🔥 บังคับเป็น JPG
+        }
+      )
+
+      const response = await fetch(manipulatedImage.uri)
+      const arrayBuffer = await response.arrayBuffer()
+
+      const fileName = `${userId}/${Date.now()}.jpg`
+
+      const { error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, arrayBuffer, {
+          contentType: 'image/jpeg',
+        })
+
+      if (error) {
+        console.log('UPLOAD ERROR:', error)
+        throw error
+      }
+
+      const { data } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName)
+
+      console.log('PUBLIC URL:', data.publicUrl)
+      return data.publicUrl
+    } catch (err) {
+      console.log(err)
+      throw err
+    }
+  }
+
+  const handleSave = async () => {
+    try {
+      setUploading(true)
+
+      const quantityNumber = Number(quantity)
+      const priceNumber = Number(price)
+
+      if (!quantityNumber || quantityNumber <= 0) {
+        Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
+        setUploading(false)
+        return
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        Alert.alert('Error', 'User not logged in')
+        return
+      }
+
+      // ⭐ upload รูปก่อน
+      let imageUrl = image
+
+      if (image && image.startsWith('file')) {
+        imageUrl = await uploadImageToSupabase(image, user.id)
+      }
+
+      await createProduct({
+        userId: user.id,
+        barcode: barcode || '',
+        templateId: null,
+        name,
+        category,
+        storage,
+        locationId: locationId ?? '',
+        storageDate,
+        expireDate,
+        quantity: quantityNumber,
+        imageUrl: imageUrl,
+        price: priceNumber || null,
+        supplierId: supplier,
+        lowStockEnabled: lowStock,
+        notifyEnabled,
+        lowStockThreshold: lowStock ? Number(lowStockThreshold) : null,
+        notifyBeforeDays: notifyEnabled ? Number(notifyDays) : null,
+      })
+
+      Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
+      router.replace('/overview')
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Save failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+  
   const Dropdown = ({ label, value, options, onSelect, type }: DropdownProps) => {
     const selectedLabel =
       options.find((o: Option) => o.value === value)?.label || label;

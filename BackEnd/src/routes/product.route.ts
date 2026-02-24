@@ -13,6 +13,7 @@ import {
   deleteProduct,
 } from '../services/product.service'
 import { AuthRequest } from '../types/auth-request'
+import { supabaseAdmin } from '../supabase'
 
 const router = Router()
 
@@ -227,5 +228,29 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     })
   }
 })
+
+router.get(
+  '/history/deleted',
+  requireAuth,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.id
+
+      const { data, error } = await supabaseAdmin
+        .from('product_delete_history')
+        .select('*')
+        .eq('deleted_by', userId)
+        .order('deleted_at', { ascending: false })
+
+      if (error) throw error
+
+      res.json(data)
+    } catch (err: any) {
+      res.status(500).json({
+        message: err.message || 'Fetch history failed',
+      })
+    }
+  }
+)
 
 export default router

@@ -177,45 +177,71 @@ export async function deleteProductQuantity(
   productId: string,
   quantityToDelete: number
 ) {
-  // 1️⃣ ดึง product ก่อน
-  const { data: product, error: fetchError } = await supabaseAdmin
+  const { data: product, error } = await supabaseAdmin
     .from('products')
-    .select('id, quantity, owner_id')
+    .select(`
+      id,
+      name,
+      quantity,
+      owner_id,
+      location_id,
+      template_id,
+      product_templates (
+        image_url
+      )
+    `)
     .eq('id', productId)
     .eq('owner_id', userId)
     .single()
 
-  if (fetchError || !product) {
+  if (error || !product) {
     throw new Error('Product not found')
   }
 
   if (quantityToDelete <= 0) {
-    throw new Error('Invalid quantity')
+    throw new Error('Invalid quantiaty')
   }
 
-  // 2️⃣ ถ้าลบหมดหรือมากกว่า → ลบทั้ง row
+  const template = product.product_templates as
+    | { image_url: string | null }
+    | { image_url: string | null }[]
+    | null
+
+  const imageUrl = Array.isArray(template)
+    ? template[0]?.image_url ?? null
+    : template?.image_url ?? null
+
+  // ✅ บันทึก history พร้อมรูป
+  await supabaseAdmin
+    .from('product_delete_history')
+    .insert({
+      product_id: product.id,
+      product_name: product.name,
+      deleted_quantity: quantityToDelete,
+      deleted_by: userId,
+      location_id: product.location_id,
+      photo_url: imageUrl, // 🔥 เก็บรูป
+    })
+
+  // ลบหมด
   if (product.quantity <= quantityToDelete) {
-    const { error: deleteError } = await supabaseAdmin
+    await supabaseAdmin
       .from('products')
       .delete()
       .eq('id', productId)
       .eq('owner_id', userId)
 
-    if (deleteError) throw deleteError
-
     return { deleted: true }
   }
 
-  // 3️⃣ ถ้ายังเหลือ → update quantity
-  const { error: updateError } = await supabaseAdmin
+  // ยังเหลือ
+  await supabaseAdmin
     .from('products')
     .update({
       quantity: product.quantity - quantityToDelete,
     })
     .eq('id', productId)
     .eq('owner_id', userId)
-
-  if (updateError) throw updateError
 
   return { deleted: false }
 }
@@ -460,13 +486,52 @@ export async function deleteProduct(
   userId: string,
   productId: string
 ) {
-  const { error } = await supabaseAdmin
+  const { data: product, error } = await supabaseAdmin
+    .from('products')
+    .select(`
+      id,
+      name,
+      quantity,
+      location_id,
+      product_templates (
+        image_url
+      )
+    `)
+    .eq('id', productId)
+    .eq('owner_id', userId)
+    .single()
+
+  if (error || !product) {
+    throw new Error('Product not found')
+  }
+
+  const template = product.product_templates as
+    | { image_url: string | null }
+    | { image_url: string | null }[]
+    | null
+
+  const imageUrl = Array.isArray(template)
+    ? template[0]?.image_url ?? null
+    : template?.image_url ?? null
+
+  // ✅ บันทึก history พร้อมรูป
+  await supabaseAdmin
+    .from('product_delete_history')
+    .insert({
+      product_id: product.id,
+      product_name: product.name,
+      deleted_quantity: product.quantity,
+      deleted_by: userId,
+      location_id: product.location_id,
+      photo_url: imageUrl, // 🔥 เก็บรูป
+    })
+
+  // ✅ ลบจริง
+  await supabaseAdmin
     .from('products')
     .delete()
     .eq('id', productId)
     .eq('owner_id', userId)
-
-  if (error) throw error
 
   return { deleted: true }
 }

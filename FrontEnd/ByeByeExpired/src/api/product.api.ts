@@ -283,3 +283,21 @@ export const deleteProduct = async (productId: string) => {
 
   return res.json()
 }
+
+export async function getDeletedHistory(token: string) {
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/products/history/deleted`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const text = await res.text();
+
+  if (!res.ok) {
+    throw new Error(`Fetch history failed: ${res.status}`);
+  }
+
+  return JSON.parse(text);
+}
