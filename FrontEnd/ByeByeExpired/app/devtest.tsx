@@ -97,6 +97,30 @@ export default function DevTestScreen() {
 
         <View style={styles.buttonWrapper}>
           <Button
+            title="ไปหน้า Storage Fridge"
+            color="#FE7EA9"
+            onPress={() => router.push('/storageFridge')}
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button
+            title="ไปหน้า Storage Freezer"
+            color="#FE7EA9"
+            onPress={() => router.push('/storageFreezer')}
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button
+            title="ไปหน้า Storage Dryfood"
+            color="#FE7EA9"
+            onPress={() => router.push('/storageDryfood')}
+          />
+        </View>
+
+        <View style={styles.buttonWrapper}>
+          <Button
             title="ไปหน้า Settings"
             color="purple"
             onPress={() => router.push('/setting')}
