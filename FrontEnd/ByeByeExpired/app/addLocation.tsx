@@ -12,6 +12,7 @@ import { router } from 'expo-router'
 import { supabase } from '../src/supabase'
 import { Ionicons } from '@expo/vector-icons'
 import { createLocation } from '../src/api/location.api'
+import { LinearGradient } from 'expo-linear-gradient'
 
 export default function AddLocationScreen() {
   const [name, setName] = useState('')
@@ -37,13 +38,10 @@ export default function AddLocationScreen() {
     }
 
     try {
-      await createLocation(session.access_token, {
-        name,
-        type,
-      })
+      await createLocation(session.access_token, { name, type })
 
-      Alert.alert('Success', 'Location created!', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert('สำเร็จ', 'เพิ่มสถานที่เรียบร้อยแล้ว', [
+        { text: 'ตกลง', onPress: () => router.back() },
       ])
     } catch (err: any) {
       Alert.alert('Error', err.message)
@@ -53,37 +51,47 @@ export default function AddLocationScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#d9c7f7', '#c7d8f7']}
+      style={styles.container}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={26} color="#6a367a" />
+          <Ionicons name="arrow-back" size={26} color="#4b2a86" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Location</Text>
+        <Text style={styles.headerTitle}>เพิ่มสถานที่เก็บใหม่</Text>
         <View style={{ width: 26 }} />
       </View>
 
-      {/* Card */}
-      <View style={styles.card}>
-        {/* Title */}
-        <Text style={styles.title}>Create a new location</Text>
-        <Text style={styles.subtitle}>
-          Organize your storages by location
+      {/* Icon Section */}
+      <View style={styles.iconWrapper}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="location" size={50} color="#7b3fe4" />
+        </View>
+        <Text style={styles.bigTitle}>เพิ่มสถานที่เก็บ</Text>
+        <Text style={styles.subTitle}>
+          จัดการสินค้าได้อย่างมีประสิทธิภาพ
         </Text>
+      </View>
 
-        {/* Name */}
-        <Text style={styles.label}>📍 Location Name</Text>
+      {/* Name Card */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionLabel}>• ชื่อสถานที่</Text>
         <TextInput
           value={name}
           onChangeText={setName}
-          placeholder="e.g. Home, Office"
+          placeholder="ระบุชื่อสถานที่เก็บของคุณ"
+          placeholderTextColor="#aaa"
           style={styles.input}
         />
+      </View>
 
-        {/* Type */}
-        <Text style={styles.label}>🏷 Location Type</Text>
+      {/* Type Card */}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionLabel}>• ประเภทสถานที่</Text>
+
         <View style={styles.typeRow}>
-          {/* Personal */}
           <TouchableOpacity
             style={[
               styles.typeCard,
@@ -95,10 +103,9 @@ export default function AddLocationScreen() {
               source={require('../assets/images/home.png')}
               style={styles.typeImage}
             />
-            <Text style={styles.typeText}>Personal</Text>
+            <Text style={styles.typeText}>ส่วนตัว</Text>
           </TouchableOpacity>
 
-          {/* Business */}
           <TouchableOpacity
             style={[
               styles.typeCard,
@@ -110,118 +117,139 @@ export default function AddLocationScreen() {
               source={require('../assets/images/business.png')}
               style={styles.typeImage}
             />
-            <Text style={styles.typeText}>Business</Text>
+            <Text style={styles.typeText}>ธุรกิจ</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        {/* Save */}
-        <TouchableOpacity
+      {/* Save Button */}
+      <TouchableOpacity
+        onPress={handleSave}
+        disabled={loading}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={['#b794f4', '#7ea7f7']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
           style={styles.saveButton}
-          onPress={handleSave}
-          disabled={loading}
         >
           <Text style={styles.saveText}>
-            {loading ? 'Saving...' : 'Create Location'}
+            {loading ? 'กำลังบันทึก...' : '+ เพิ่มสถานที่เก็บ'}
           </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    </LinearGradient>
   )
 }
-
-const PRIMARY = '#6a367a'
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f6f2f8',
-    padding: 20,
-    paddingTop: 75 
+    paddingTop: 70,
+    paddingHorizontal: 20,
   },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: PRIMARY,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: PRIMARY,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#777',
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#333',
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    marginBottom: 24,
+    marginBottom: 20,
   },
 
-  /* 🔽 Location type */
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4b2a86',
+  },
+
+  iconWrapper: {
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+
+  iconCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 30,
+    backgroundColor: '#eee6fb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  bigTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#5b2dbf',
+  },
+
+  subTitle: {
+    fontSize: 14,
+    color: '#7a6f9b',
+    marginTop: 4,
+  },
+
+  sectionCard: {
+    backgroundColor: '#f3f3f3',
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 20,
+  },
+
+  sectionLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#5b2dbf',
+    marginBottom: 12,
+  },
+
+  input: {
+    backgroundColor: '#e9edf2',
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 15,
+  },
+
   typeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
   },
+
   typeCard: {
     width: '48%',
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
+    padding: 15,
+    backgroundColor: '#fff',
     alignItems: 'center',
+    elevation: 4,
   },
+
   selectedCard: {
-    borderColor: PRIMARY,
-    backgroundColor: '#f4ecf7',
+    borderWidth: 2,
+    borderColor: '#7b3fe4',
   },
+
   typeImage: {
     width: 80,
     height: 80,
     resizeMode: 'contain',
-    marginBottom: 10,
-  },
-  typeText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    marginBottom: 8,
   },
 
-  /* 🔽 Save button */
-  saveButton: {
-    backgroundColor: PRIMARY,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
+  typeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5b2dbf',
   },
+
+  saveButton: {
+    paddingVertical: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+
   saveText: {
     color: '#fff',
     fontSize: 16,
