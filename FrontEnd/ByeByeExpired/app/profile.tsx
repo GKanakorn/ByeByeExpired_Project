@@ -244,7 +244,7 @@ export default function ProfilePage() {
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
         {/* Header Icons */}
         <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+          <TouchableOpacity onPress={() => router.push('/overview')} style={styles.iconButton}>
             <Ionicons name="home" size={26} color="#6B7280" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/setting')} style={styles.iconButton}>

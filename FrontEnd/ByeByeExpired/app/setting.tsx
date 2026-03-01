@@ -15,16 +15,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { supabase } from '../src/supabase'
-import { getMyLocations } from '../src/api/location.api'
-import { deleteLocation } from '../src/api/location.api'
+import { getMyLocations, deleteLocation, Location } from '../src/api/location.api'
 import { useLocation } from '../src/context/LocationContext'
 
-type Location = {
-    id: string
-    name: string
-    type: 'personal' | 'business'
-    owner_id: string
-}
 
 export default function SettingScreen() {
     const navigation = useNavigation();
@@ -94,7 +87,13 @@ export default function SettingScreen() {
                 <FlatList
                     data={[
                         ...(locations ?? []),
-                        { id: "add", name: "", type: "personal" as const, owner_id: "" }
+                        { 
+                            id: "add", 
+                            name: "", 
+                            type: "personal" as const, 
+                            owner_id: "", 
+                            role: "member" as const 
+                        }
                     ]}
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -127,7 +126,7 @@ export default function SettingScreen() {
                                     !isSelected && isDimmed && { opacity: 0.4 },
                                 ]}
                             >
-                                {item.owner_id === currentUserId && (
+                                {item.role === "owner" && (
                                 <TouchableOpacity
                                     style={styles.closeBtn}
                                     onPress={() => {

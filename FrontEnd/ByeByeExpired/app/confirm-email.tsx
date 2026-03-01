@@ -99,7 +99,7 @@ export default function ConfirmEmailScreen() {
       return
     }
 
-    router.replace('/devtest')
+    router.replace('/overview')
   }
 
   const handleResend = async () => {

@@ -26,21 +26,27 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id
 
-    // 🔹 locations ที่เป็นเจ้าของ
+    // 🔹 locations ที่เป็นเจ้าของ → role = owner
     const { data: owned, error: ownedErr } = await supabaseAdmin
       .from('locations')
-      .select('id, name, type, owner_id')   // ⭐ เพิ่ม type
+      .select('id, name, type, owner_id')
       .eq('owner_id', userId)
 
     if (ownedErr) {
       return res.status(400).json({ message: ownedErr.message })
     }
 
-    // 🔹 locations ที่เป็นสมาชิก
+    const ownedWithRole = (owned ?? []).map(loc => ({
+      ...loc,
+      role: 'owner' as const,
+    }))
+
+    // 🔹 locations ที่เป็นสมาชิก → เอา role จาก location_members
     const { data: memberOf, error: memberErr } = await supabaseAdmin
       .from('location_members')
       .select(`
-        locations (
+        role,
+        locations:location_id (
           id,
           name,
           type,
@@ -53,19 +59,54 @@ router.get(
       return res.status(400).json({ message: memberErr.message })
     }
 
-    const memberLocations = (memberOf ?? [])
-      .flatMap(row => row.locations ?? [])
+    const memberWithRole: Array<{
+      id: string
+      name: string
+      type: string
+      owner_id: string
+      role: 'owner' | 'admin' | 'member'
+    }> = (memberOf ?? [])
+      .map(row => {
+        const loc = Array.isArray(row.locations)
+          ? row.locations[0]
+          : row.locations
+        if (!loc) return null
 
-    // 🔹 รวมข้อมูล + กันซ้ำ
+        return {
+          id: loc.id,
+          name: loc.name,
+          type: loc.type,
+          owner_id: loc.owner_id,
+          role: row.role as 'owner' | 'admin' | 'member',
+        }
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          id: string
+          name: string
+          type: string
+          owner_id: string
+          role: 'owner' | 'admin' | 'member'
+        } => item !== null
+      )
+
+    // 🔹 รวมข้อมูล + กันซ้ำ (owner มี priority สูงสุด)
     const map = new Map<string, {
       id: string
       name: string
       type: string
       owner_id: string
+      role: 'owner' | 'admin' | 'member'
     }>()
 
-      ; (owned ?? []).forEach(loc => map.set(loc.id, loc))
-    memberLocations.forEach(loc => map.set(loc.id, loc))
+    ownedWithRole.forEach(loc => map.set(loc.id, loc))
+    memberWithRole.forEach(loc => {
+      if (!map.has(loc.id)) {
+        map.set(loc.id, loc)
+      }
+    })
 
     const result = Array.from(map.values())
 

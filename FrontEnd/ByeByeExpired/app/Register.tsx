@@ -117,7 +117,7 @@ const RegisterScreen = () => {
 
         console.log('[LOGIN SUCCESS] UID:', user.id);
 
-        router.replace('/devtest');
+        router.replace('/overview');
       }
     }
   };

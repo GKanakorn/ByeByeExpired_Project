@@ -1,18 +1,18 @@
 import React from "react"
-import { View, Text, StyleSheet } from "react-native"
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native"
 import { useLocation } from "../src/context/LocationContext"
 import PersonalOverview from "../components/PersonalOverview"
 import BusinessOverview from "../components/BusinessOverview"
 
-
 export default function OverviewScreen() {
   const { currentLocation } = useLocation()
 
-  // ยังไม่ได้เลือก location
+  // 🔥 ถ้ายังไม่มี location → แสดง loading ไปเลย
   if (!currentLocation) {
     return (
       <View style={styles.center}>
-        <Text style={styles.text}>ยังไม่ได้เลือกสถานที่</Text>
+        <ActivityIndicator size="large" color="#F19BEA" />
+        <Text style={styles.text}>กำลังโหลดสถานที่...</Text>
       </View>
     )
   }
@@ -31,7 +31,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   text: {
-    fontSize: 16,
+    marginTop: 12,
+    fontSize: 14,
     color: "#999",
   },
 })

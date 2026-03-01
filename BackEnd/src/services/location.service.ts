@@ -14,6 +14,13 @@ export async function createLocation(userId: string, data: {
     .select()
     .single()
 
+  await supabaseAdmin
+    .from('location_members')
+    .insert({
+      user_id: userId,
+      location_id: location.id,
+      role: 'owner',
+    })
   if (error) throw error
 
   return location
@@ -43,10 +50,35 @@ export async function deleteLocation(userId: string, locationId: string) {
 }
 export async function getMyLocations(userId: string) {
   const { data, error } = await supabaseAdmin
-    .from('locations')
-    .select('id, name, type') // ⭐ ต้องมี type
-    .eq('owner_id', userId)
+    .from("location_members")
+    .select(`
+      role,
+      locations:location_id (
+        id,
+        name,
+        type,
+        owner_id
+      )
+    `)
+    .eq("user_id", userId)
 
   if (error) throw error
-  return data
+  if (!data) return []
+
+  return data.map((row: any) => {
+    const location = row.locations
+
+    if (!location) {
+      throw new Error("Location relation not found")
+    }
+    return {
+      id: location.id,
+      name: location.name,
+      type: location.type,
+      owner_id: location.owner_id,
+      role: row.role,
+
+    }
+
+  })
 }

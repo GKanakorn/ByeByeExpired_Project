@@ -14,12 +14,6 @@ export async function getLocationMembers(
     throw new Error("Location not found");
   }
 
-  const { data: ownerProfile } = await supabaseAdmin
-  .from('profiles')
-  .select('email')
-  .eq('id', location.owner_id)
-  .single()
-
   // Get members with profiles join
   const { data: members, error: membersError } = await supabaseAdmin
     .from("location_members")
@@ -36,11 +30,6 @@ export async function getLocationMembers(
     throw new Error("Fetch members failed");
   }
   const formattedMembers = [
-    {
-      id: location.owner_id,
-      email: ownerProfile?.email ?? '',
-      role: 'owner',
-    },
     ...(members ?? []).map((m: any) => ({
       id: m.user_id,
       email: Array.isArray(m.profiles)

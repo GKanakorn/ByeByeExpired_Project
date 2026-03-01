@@ -1,3 +1,4 @@
+//context/LocationContest.tsx
 import { createContext, useContext, useEffect, useState } from "react"
 import { getMyLocations, Location } from "../api/location.api"
 import { supabase } from "../supabase"

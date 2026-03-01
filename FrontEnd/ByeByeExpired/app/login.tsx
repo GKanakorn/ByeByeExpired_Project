@@ -28,7 +28,7 @@ export default function LoginScreen() {
         refresh_token: data.refresh_token,
       })
 
-      router.replace('/devtest')
+      router.replace('/overview')
     } catch (err: any) {
       Alert.alert('Login failed', err.message)
     }
@@ -94,7 +94,7 @@ export default function LoginScreen() {
 
         console.log('[LOGIN SUCCESS] UID:', user.id);
 
-        router.replace('/devtest');
+        router.replace('/overview');
       }
     }
   };

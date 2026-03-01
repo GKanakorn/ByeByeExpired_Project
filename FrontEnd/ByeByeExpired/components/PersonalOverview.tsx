@@ -23,11 +23,13 @@ import { RectButton } from 'react-native-gesture-handler'
 import { deleteStorage } from '../src/api/storage.api'
 import { searchProducts } from "../src/api/product.api"
 import { Alert } from 'react-native'
+import { permissions } from "../src/utils/permissions"
 
 type Location = {
     id: string
     name: string
     type: "personal" | "business"
+    role: "owner" | "admin" | "member"
 }
 
 export default function PersonalOverview({ location }: { location: Location }) {
@@ -41,6 +43,9 @@ export default function PersonalOverview({ location }: { location: Location }) {
     const [isSearching, setIsSearching] = useState(false)
 
     const [allProducts, setAllProducts] = useState<any[]>([])
+    const role = location.role
+    const canManageProduct = permissions.canManageProduct(role)
+    const canManageStorage = permissions.canManageStorage(role)
 
     const fetchAllData = async () => {
         try {
@@ -365,7 +370,7 @@ export default function PersonalOverview({ location }: { location: Location }) {
                             STORAGE_ICON_CONFIG[item.icon as keyof typeof STORAGE_ICON_CONFIG]
                             ?? DEFAULT_STORAGE_ICON;
 
-                        return (
+                        return canManageStorage ? (
                             <Swipeable
                                 key={item.id}
                                 renderRightActions={() => renderRightActions(item.id)}
@@ -412,17 +417,59 @@ export default function PersonalOverview({ location }: { location: Location }) {
                                     </View>
                                 </View>
                             </Swipeable>
+                        ) : (
+                            <View
+                                key={item.id}
+                                style={[
+                                    styles.storageItem,
+                                    {
+                                        backgroundColor: "#d3ddff4d",
+                                        borderRadius: 12,
+                                        padding: 12,
+                                    },
+                                ]}
+                            >
+                                {/* วงกลม icon */}
+                                <View
+                                    style={[
+                                        styles.iconCircle,
+                                        { backgroundColor: item.color || iconConfig.color },
+                                    ]}
+                                >
+                                    <Image
+                                        source={iconConfig.image}
+                                        style={styles.iconImage}
+                                        resizeMode="contain"
+                                    />
+                                </View>
+
+                                <Text style={{ flex: 1, marginLeft: 12, fontWeight: "600" }}>
+                                    {item.name}
+                                </Text>
+
+                                <View
+                                    style={[
+                                        styles.countBubble,
+                                        { backgroundColor: iconConfig.color },
+                                    ]}
+                                >
+                                    <Text style={{ color: "white", fontSize: 12 }}>
+                                        {item.item_count ?? 0}
+                                    </Text>
+                                </View>
+                            </View>
                         );
                     })}
-
-                    <TouchableOpacity
-                        style={styles.addStorage}
-                        onPress={() => router.push("/addStorage")}
-                    >
-                        <Text style={{ color: "#3B82F6", fontWeight: "600" }}>
-                            + Add Storage
-                        </Text>
-                    </TouchableOpacity>
+                    {canManageStorage && (
+                        <TouchableOpacity
+                            style={styles.addStorage}
+                            onPress={() => router.push("/addStorage")}
+                        >
+                            <Text style={{ color: "#3B82F6", fontWeight: "600" }}>
+                                + Add Storage
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </ScrollView>
 
@@ -533,53 +580,58 @@ export default function PersonalOverview({ location }: { location: Location }) {
             </View>
 
             {/* Add Product Button */}
-            <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() => setShowPlusMinus(!showPlusMinus)}
-            >
-                <Image source={require("../assets/images/add.png")} style={styles.addIcon} />
-            </TouchableOpacity>
+            {canManageProduct && (
+                <>
+                    {/* Add Product Button */}
+                    <TouchableOpacity
+                        style={styles.addBtn}
+                        onPress={() => setShowPlusMinus(!showPlusMinus)}
+                    >
+                        <Image
+                            source={require("../assets/images/add.png")}
+                            style={styles.addIcon}
+                        />
+                    </TouchableOpacity>
 
+                    {showPlusMinus && (
+                        <View style={styles.plusMinusContainer}>
+                            <TouchableOpacity
+                                style={styles.minusBtn}
+                                onPress={() => {
+                                    setShowPlusMinus(false)
+                                    router.replace({
+                                        pathname: '/scanBarcode',
+                                        params: {
+                                            mode: 'remove',
+                                            context: location.type,
+                                            locationId: location.id,
+                                        },
+                                    })
+                                }}
+                            >
+                                <Text style={styles.pmText}>-</Text>
+                            </TouchableOpacity>
 
-            {
-                showPlusMinus && (
-                    <View style={styles.plusMinusContainer}>
-                        <TouchableOpacity
-                            style={styles.minusBtn}
-                            onPress={() => {
-                                setShowPlusMinus(false)
-                                router.replace({
-                                    pathname: '/scanBarcode',
-                                    params: {
-                                        mode: 'remove',
-                                        context: location.type,
-                                        locationId: location.id,
-                                    },
-                                })
-                            }}
-                        >
-                            <Text style={styles.pmText}>-</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.plusBtn}
-                            onPress={() => {
-                                setShowPlusMinus(false)
-                                router.replace({
-                                    pathname: '/scanBarcode',
-                                    params: {
-                                        mode: 'add',
-                                        context: location.type,
-                                        locationId: location.id,
-                                    },
-                                })
-                            }}
-                        >
-                            <Text style={styles.pmText}>+</Text>
-                        </TouchableOpacity>
-                    </View>
-                )
-            }
+                            <TouchableOpacity
+                                style={styles.plusBtn}
+                                onPress={() => {
+                                    setShowPlusMinus(false)
+                                    router.replace({
+                                        pathname: '/scanBarcode',
+                                        params: {
+                                            mode: 'add',
+                                            context: location.type,
+                                            locationId: location.id,
+                                        },
+                                    })
+                                }}
+                            >
+                                <Text style={styles.pmText}>+</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </>
+            )}
 
 
         </View >

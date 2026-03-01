@@ -5,6 +5,7 @@ export type Location = {
   name: string
   type: "personal" | "business"
   owner_id: string
+  role: "owner" | "admin" | "member";
 }
 
 export async function createLocation(token: string, data: {
