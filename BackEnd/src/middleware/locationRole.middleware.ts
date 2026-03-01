@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../supabase'
 import { AuthRequest } from '../types/auth-request'
 
 export function requireLocationRole(
-  allowedRoles: Array<'admin' | 'editor' | 'viewer'>
+  allowedRoles: Array<'owner' | 'admin' | 'member'>
 ) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {

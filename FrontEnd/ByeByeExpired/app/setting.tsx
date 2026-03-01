@@ -23,23 +23,27 @@ type Location = {
     id: string
     name: string
     type: 'personal' | 'business'
+    owner_id: string
 }
 
 export default function SettingScreen() {
     const navigation = useNavigation();
     const { setCurrentLocation } = useLocation()
 
-    const [mode, setMode] = useState("select");
-    const [admins, setAdmins] = useState(["ผู้ดูแล 1", "ผู้ดูแล 2"]); // ⭐ เพิ่ม
     const [locations, setLocations] = useState<Location[]>([]);
     const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     // Fetch locations function moved out of useEffect
     const fetchLocations = async () => {
         const { data: session } = await supabase.auth.getSession();
         const token = session?.session?.access_token;
         if (!token) return;
+
+        const { data: userData } = await supabase.auth.getUser()
+        const userId = userData.user?.id || null
+        setCurrentUserId(userId)
 
         const data = await getMyLocations(token);
         setLocations(data);
@@ -90,7 +94,7 @@ export default function SettingScreen() {
                 <FlatList
                     data={[
                         ...(locations ?? []),
-                        { id: "add", name: "", type: "personal" as const }
+                        { id: "add", name: "", type: "personal" as const, owner_id: "" }
                     ]}
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -123,6 +127,7 @@ export default function SettingScreen() {
                                     !isSelected && isDimmed && { opacity: 0.4 },
                                 ]}
                             >
+                                {item.owner_id === currentUserId && (
                                 <TouchableOpacity
                                     style={styles.closeBtn}
                                     onPress={() => {
@@ -160,6 +165,7 @@ export default function SettingScreen() {
                                 >
                                     <Ionicons name="close" size={16} color="#999" />
                                 </TouchableOpacity>
+                                )}
                                 {deletingId === item.id && (
                                     <View style={styles.loadingOverlay}>
                                         <ActivityIndicator size="small" color="#999" />
@@ -193,83 +199,28 @@ export default function SettingScreen() {
                                         isPersonal ? styles.greenBtn : styles.orangeBtn,
                                     ]}
                                     onPress={() => {
-                                        setCurrentLocation(item)
-                                        setSelectedLocationId(item.id)
+                                        if (item.id !== "add") {
+                                            setCurrentLocation(item)
+                                        }
                                         navigation.goBack()
                                     }}
                                 >
                                     <Text style={styles.enterText}>เข้าใช้งาน</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.manageBtn}
+                                    onPress={() => {
+                                        (navigation.navigate as any)("manageLocation", { locationId: item.id });
+                                    }}
+                                >
+                                    <Text style={styles.manageText}>จัดการผู้ใช้</Text>
                                 </TouchableOpacity>
                             </View>
                         );
                     }}
                 />
 
-                {/* ===== ผู้ดูแล ===== */}
-                {selectedLocationId && (
-                    <View style={styles.adminSection}>
-                        <View style={styles.adminHeader}>
-                            <Ionicons
-                                name="people"
-                                size={18}
-                                color="#000"
-                            />
-                            <Text style={styles.adminTitle}>
-                                จัดการผู้ใช้
-                            </Text>
-                        </View>
 
-                        <View style={styles.adminBox}>
-                            {admins.map((name, index) => (
-                                <View
-                                    key={index}
-                                    style={styles.adminRow}
-                                >
-                                    <TextInput
-                                        value={name}
-                                        onChangeText={(text) => {
-                                            const newAdmins = [...admins];
-                                            newAdmins[index] = text;
-                                            setAdmins(newAdmins);
-                                        }}
-                                        style={styles.adminInput}
-                                    />
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            setAdmins(
-                                                admins.filter(
-                                                    (_, i) => i !== index
-                                                )
-                                            )
-                                        }
-                                    >
-                                        <Ionicons
-                                            name="close"
-                                            size={18}
-                                            color="#999"
-                                        />
-                                    </TouchableOpacity>
-                                </View>
-                            ))}
-
-                            <TouchableOpacity
-                                style={styles.addAdminBtn}
-                                onPress={() =>
-                                    setAdmins([...admins, ""])
-                                }
-                            >
-                                <Ionicons
-                                    name="add-circle-outline"
-                                    size={20}
-                                    color="#000"
-                                />
-                                <Text style={styles.addAdminText}>
-                                    เพิ่มผู้ใช้
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
 
                 {/* Delete Account */}
                 <View style={styles.deleteBox}>
@@ -322,7 +273,7 @@ const styles = StyleSheet.create({
 
     card: {
         width: 120,
-        height: 170,
+        height: 190,
         borderRadius: 18,
         paddingVertical: 10,
         paddingHorizontal: 10,
@@ -390,6 +341,21 @@ const styles = StyleSheet.create({
     enterText: {
         fontSize: 13,
         fontWeight: "600",
+    },
+
+    manageBtn: {
+        marginTop: 6,
+        width: "100%",
+        paddingVertical: 6,
+        borderRadius: 16,
+        alignItems: "center",
+        backgroundColor: "#EAF0FF",
+    },
+
+    manageText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#5A6AE0",
     },
 
     cardAdd: {

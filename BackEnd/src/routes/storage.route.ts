@@ -12,7 +12,7 @@ const router = Router()
 router.post(
   '/locations/:locationId/storages',
   requireAuth,
-  requireLocationRole(['admin', 'editor']),
+  requireLocationRole(['admin', 'owner']),
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.params.locationId as string

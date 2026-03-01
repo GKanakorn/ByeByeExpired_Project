@@ -1,6 +1,7 @@
 // routes/product.routes.ts
 import { Router, Response } from 'express'
 import { requireAuth } from '../middleware/auth.middleware'
+import { requireLocationRole } from '../middleware/locationRole.middleware'
 import {
   createProduct,
   getOverview,
@@ -18,7 +19,7 @@ import { supabaseAdmin } from '../supabase'
 const router = Router()
 
 
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, requireLocationRole(["owner", "admin"]), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
     const result = await createProduct(userId, req.body)
@@ -121,7 +122,7 @@ router.get('/by-barcode/:barcode', requireAuth, async (req: AuthRequest, res: Re
     })
   }
 })
-router.patch('/:id/delete', requireAuth, async (req: AuthRequest, res: Response) => {
+router.patch('/:id/delete', requireAuth, requireLocationRole(["owner", "admin"]), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
     const productId = req.params.id as string
@@ -196,7 +197,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 })
 
 // ✅ UPDATE PRODUCT
-router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.put('/:id', requireAuth, requireLocationRole(["owner", "admin"]), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
     const productId = req.params.id as string
@@ -213,7 +214,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 })
 
 // ✅ DELETE PRODUCT
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, requireLocationRole(["owner", "admin"]), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
     const productId = req.params.id as string

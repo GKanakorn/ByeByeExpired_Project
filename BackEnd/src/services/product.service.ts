@@ -139,7 +139,6 @@ export async function getOverview(userId: string, locationId: string) {
       )
     `)
     .eq('location_id', locationId)
-    .eq('owner_id', userId)
 
   if (error) throw error
 
@@ -259,7 +258,6 @@ export async function getProductsByLocation(
         image_url
       )
     `)
-    .eq('owner_id', userId)
     .eq('location_id', locationId)
     .order('expiration_date', { ascending: true })
 
@@ -284,7 +282,6 @@ export async function getProductsByBarcode(
     `)
     .eq('barcode', barcode)
     .eq('location_id', locationId)
-    .eq('owner_id', userId)
     .order('expiration_date', { ascending: true })
 
   if (error) throw error
@@ -311,8 +308,7 @@ export async function searchProducts(
         barcode
       )
     `)
-    .eq('owner_id', userId)         // ✅ ถูกต้อง
-    .eq('location_id', locationId)  // ✅ ถูกต้อง
+    .eq('location_id', locationId)
     .ilike('product_templates.name', `%${keyword}%`)
     .order('expiration_date', { ascending: true })
 
@@ -349,7 +345,6 @@ export async function getProductById(
   )
 `)
     .eq('id', productId)
-    .eq('owner_id', userId)
     .single()
 
   if (error) {
@@ -374,7 +369,6 @@ export async function getExpiredProducts(
         category
       )
     `)
-    .eq('owner_id', userId)
     .eq('location_id', locationId)
     .order('expiration_date', { ascending: true })
 
@@ -409,7 +403,6 @@ export async function getNearlyExpiredProducts(
         category
       )
     `)
-    .eq('owner_id', userId)
     .eq('location_id', locationId)
     .order('expiration_date', { ascending: true })
 

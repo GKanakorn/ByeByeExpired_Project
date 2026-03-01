@@ -29,7 +29,7 @@ router.get(
     // 🔹 locations ที่เป็นเจ้าของ
     const { data: owned, error: ownedErr } = await supabaseAdmin
       .from('locations')
-      .select('id, name, type')   // ⭐ เพิ่ม type
+      .select('id, name, type, owner_id')   // ⭐ เพิ่ม type
       .eq('owner_id', userId)
 
     if (ownedErr) {
@@ -43,7 +43,8 @@ router.get(
         locations (
           id,
           name,
-          type
+          type,
+          owner_id
         )
       `)
       .eq('user_id', userId)
@@ -56,9 +57,14 @@ router.get(
       .flatMap(row => row.locations ?? [])
 
     // 🔹 รวมข้อมูล + กันซ้ำ
-    const map = new Map<string, { id: string; name: string; type: string }>()
+    const map = new Map<string, {
+      id: string
+      name: string
+      type: string
+      owner_id: string
+    }>()
 
-    ;(owned ?? []).forEach(loc => map.set(loc.id, loc))
+      ; (owned ?? []).forEach(loc => map.set(loc.id, loc))
     memberLocations.forEach(loc => map.set(loc.id, loc))
 
     const result = Array.from(map.values())

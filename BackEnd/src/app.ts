@@ -7,6 +7,7 @@ import barcodeRoute from './routes/barcode.route'
 import productRoute from './routes/product.route'
 import supplierRoutes from "./routes/supplier.route"
 import profileRoute from './routes/profile.route'
+import manageLocationRoute from './routes/manageLocation.route'
 
 
 const app = express()
@@ -19,6 +20,7 @@ app.use('/api', storageRoute)
 app.use('/barcode', barcodeRoute)
 app.use('/products', productRoute)
 app.use("/api/suppliers", supplierRoutes)
-app.use('/profile', profileRoute)
+app.use('/profile', profileRoute)   
+app.use('/api', manageLocationRoute)
 
 export default app

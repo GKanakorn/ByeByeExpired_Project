@@ -16,32 +16,26 @@ export async function createLocation(userId: string, data: {
 
   if (error) throw error
 
-  // auto add owner as admin
-  await supabaseAdmin.from('location_members').insert({
-    location_id: location.id,
-    user_id: userId,
-    role: 'admin',
-  })
-
   return location
 }
 
-export async function deleteLocation(
-  userId: string,
-  locationId: string
-) {
-  // 1. ลบสมาชิกก่อน (กัน FK error)
-  await supabaseAdmin
-    .from('location_members')
-    .delete()
-    .eq('location_id', locationId)
+export async function deleteLocation(userId: string, locationId: string) {
 
-  // 2. ลบ location (เฉพาะ owner)
+  const { data: location } = await supabaseAdmin
+    .from('locations')
+    .select('owner_id')
+    .eq('id', locationId)
+    .single()
+
+  if (!location || location.owner_id !== userId) {
+    throw new Error('Only owner can delete this location')
+  }
+
+  // ลบ location อย่างเดียว
   const { error } = await supabaseAdmin
     .from('locations')
     .delete()
     .eq('id', locationId)
-    .eq('owner_id', userId)
 
   if (error) throw error
 
