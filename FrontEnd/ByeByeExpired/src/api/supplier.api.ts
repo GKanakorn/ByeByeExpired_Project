@@ -26,10 +26,29 @@ export async function getSuppliers(token: string) {
     return res.json()
 }
 
+export async function getSuppliersByLocation(token: string, locationId: string) {
+    if (!token) {
+        throw new Error('Not authenticated')
+    }
+
+    const res = await fetch(`${API_URL}/api/suppliers?locationId=${encodeURIComponent(locationId)}`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    })
+
+    if (!res.ok) {
+        const errData = await res.json()
+        throw new Error((errData as any)?.message || 'Get suppliers failed')
+    }
+
+    return res.json()
+}
+
 /* ===============================
    2️⃣ Get Supplier By ID
 ================================ */
-export async function getSupplierById(id: string) {
+export async function getSupplierById(id: string, locationId?: string) {
     const { data: sessionData } = await supabase.auth.getSession()
     const token = sessionData.session?.access_token
 
@@ -37,7 +56,11 @@ export async function getSupplierById(id: string) {
         throw new Error('Not authenticated')
     }
 
-    const res = await fetch(`${API_URL}/api/suppliers/${id}`, {
+    const query = locationId
+        ? `?locationId=${encodeURIComponent(locationId)}`
+        : ''
+
+    const res = await fetch(`${API_URL}/api/suppliers/${id}${query}`, {
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -62,7 +85,7 @@ export async function createSupplier(payload: {
     contact_name?: string
     note?: string
     image_url?: string | null
-}) {
+}, locationId?: string) {
     const { data: sessionData } = await supabase.auth.getSession()
     const token = sessionData.session?.access_token
 
@@ -76,7 +99,10 @@ export async function createSupplier(payload: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+            ...payload,
+            locationId,
+        }),
     })
 
     const responseData = await res.json()
@@ -92,7 +118,7 @@ export async function createSupplier(payload: {
 /* ===============================
    4️⃣ Delete Supplier
 ================================ */
-export async function deleteSupplier(id: string) {
+export async function deleteSupplier(id: string, locationId?: string) {
     const { data: sessionData } = await supabase.auth.getSession()
     const token = sessionData.session?.access_token
 
@@ -100,7 +126,11 @@ export async function deleteSupplier(id: string) {
         throw new Error('Not authenticated')
     }
 
-    const res = await fetch(`${API_URL}/api/suppliers/${id}`, {
+    const query = locationId
+        ? `?locationId=${encodeURIComponent(locationId)}`
+        : ''
+
+    const res = await fetch(`${API_URL}/api/suppliers/${id}${query}`, {
         method: 'DELETE',
         headers: {
             Authorization: `Bearer ${token}`,
@@ -110,6 +140,49 @@ export async function deleteSupplier(id: string) {
     if (!res.ok) {
         const errData = await res.json()
         throw new Error((errData as any)?.message || 'Delete supplier failed')
+    }
+
+    return res.json()
+}
+
+/* ===============================
+   5️⃣ Update Supplier
+================================ */
+export async function updateSupplier(
+    id: string,
+    payload: {
+        company_name?: string
+        phone?: string
+        address?: string
+        email?: string
+        contact_name?: string
+        note?: string
+        image_url?: string | null
+    },
+    locationId?: string
+) {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData.session?.access_token
+
+    if (!token) {
+        throw new Error('Not authenticated')
+    }
+
+    const res = await fetch(`${API_URL}/api/suppliers/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            ...payload,
+            locationId,
+        }),
+    })
+
+    if (!res.ok) {
+        const errData = await res.json()
+        throw new Error((errData as any)?.message || 'Update supplier failed')
     }
 
     return res.json()

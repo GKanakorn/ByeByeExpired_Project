@@ -10,7 +10,27 @@ export function requireLocationRole(
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    const locationId = req.params.locationId || req.body.location_id
+    // try to grab location id from various sources (camel or snake case)
+    let locationId =
+      (req.params as any).locationId ||
+      (req.query as any).locationId ||
+      (req.query as any).location_id ||
+      req.body.location_id ||
+      req.body.locationId
+
+    // if we still don't have a location and there is an :id param
+    // (used for products, etc.), fetch the record to determine
+    // the associated location
+    if (!locationId && req.params.id) {
+      const { data: record } = await supabaseAdmin
+        .from('products')
+        .select('location_id')
+        .eq('id', req.params.id)
+        .single()
+
+      locationId = record?.location_id
+    }
+
     if (!locationId) {
       return res.status(400).json({ error: 'Missing location_id' })
     }

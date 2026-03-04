@@ -86,28 +86,50 @@ export async function inviteMemberService(
   email: string,
   role: string
 ) {
-  // Find user by email
+  const normalizedRole = role?.toLowerCase()
+  const normalizedEmail = email?.toLowerCase().trim()
+  
+  if (!['owner', 'admin', 'member'].includes(normalizedRole)) {
+    throw new Error('Invalid role. Must be owner, admin, or member')
+  }
+
+  // 1️⃣ หา location
+  const { data: location, error: locationError } = await supabaseAdmin
+    .from("locations")
+    .select("id")
+    .eq("id", locationId)
+    .single();
+
+  if (locationError || !location) throw new Error("Location not found");
+
+  // 2️⃣ หา user จาก email
   const { data: user, error: userError } = await supabaseAdmin
     .from("profiles")
-    .select("id, email")
-    .eq("email", email)
+    .select("id")
+    .eq("email", normalizedEmail)
     .single();
 
   if (userError || !user) {
-    throw new Error("User not found");
+    throw new Error("User with this email not found. Please make sure they have registered first.");
   }
 
-  const { error } = await supabaseAdmin
+  // 3️⃣ เพิ่ม member เข้า location เลย
+  const { error: memberError } = await supabaseAdmin
     .from("location_members")
     .insert({
       location_id: locationId,
       user_id: user.id,
-      role,
+      role: normalizedRole,
     });
 
-  if (error) {
-    throw new Error("Invite member failed");
+  if (memberError) {
+    if (memberError.code === '23505') {
+      throw new Error("This user is already a member of this location");
+    }
+    throw new Error("Failed to add member");
   }
+
+  console.log('[INVITE] Member added successfully:', normalizedEmail)
 
   return { success: true };
 }

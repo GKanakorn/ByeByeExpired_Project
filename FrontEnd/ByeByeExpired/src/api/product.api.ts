@@ -258,10 +258,28 @@ export const updateProduct = async (
   })
 
   if (!res.ok) {
-    throw new Error('Update product failed')
+    let msg = 'Update product failed'
+    try {
+      const text = await res.text()
+      if (text) {
+        try {
+          const body = JSON.parse(text)
+          msg = body?.message || text
+        } catch {
+          msg = text
+        }
+      }
+    } catch (e: any) {
+      console.warn('failed to read error body', e)
+    }
+    throw new Error(msg)
   }
 
-  return res.json()
+  try {
+    return await res.json()
+  } catch {
+    return {} as any
+  }
 }
 
 export const deleteProduct = async (productId: string) => {
@@ -278,10 +296,74 @@ export const deleteProduct = async (productId: string) => {
   })
 
   if (!res.ok) {
-    throw new Error('Delete product failed')
+    // read text only once, then try to parse JSON from it
+    let msg = 'Delete product failed'
+    try {
+      const text = await res.text()
+      if (text) {
+        try {
+          const body = JSON.parse(text)
+          msg = body?.message || text
+        } catch {
+          msg = text
+        }
+      }
+    } catch (e: any) {
+      console.warn('failed to read error body', e)
+    }
+    throw new Error(msg)
   }
 
-  return res.json()
+  // may be empty body depending on server
+  try {
+    return await res.json()
+  } catch {
+    return {} as any
+  }
+}
+
+// helper for quantity-based delete (PATCH /products/:id/delete)
+export const deleteProductQuantity = async (
+  productId: string,
+  quantity: number
+) => {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(`${API_URL}/products/${productId}/delete`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ quantity }),
+  })
+
+  if (!res.ok) {
+    let msg = 'Delete product failed'
+    try {
+      const text = await res.text()
+      if (text) {
+        try {
+          const body = JSON.parse(text)
+          msg = body?.message || text
+        } catch {
+          msg = text
+        }
+      }
+    } catch (e: any) {
+      console.warn('failed to read error body', e)
+    }
+    throw new Error(msg)
+  }
+
+  try {
+    return await res.json()
+  } catch {
+    return {} as any
+  }
 }
 
 export async function getDeletedHistory(token: string) {

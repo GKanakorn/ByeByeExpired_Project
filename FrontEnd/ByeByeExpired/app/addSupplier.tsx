@@ -128,7 +128,7 @@ export default function AddSupplierScreen() {
         contact_name: form.contact,
         note: form.note,
         image_url: imageUrl,
-      })
+      }, (params.locationId as string) || undefined)
 
       Alert.alert('สำเร็จ', 'เพิ่ม Supplier เรียบร้อย')
       router.back()

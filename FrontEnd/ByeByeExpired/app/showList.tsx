@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,42 +9,92 @@ import {
   StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { getProducts } from '../src/api/product.api';
+import { useLocation } from '../src/context/LocationContext';
 
 interface Product {
   id: string;
   name: string;
+  quantity: number;
   price: number;
 }
 
+const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
 export default function ShowListScreen() {
   const router = useRouter();
-  const [selectedMonth, setSelectedMonth] = useState('ม.ค.');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { currentLocation } = useLocation();
+  const { locationId, filterType, monthIndex } = useLocalSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const months = [
-    'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-    'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
-  ];
+  const targetLocationId = (locationId as string) || currentLocation?.id;
+  const isBusiness = currentLocation?.type === 'business';
+  const filterTypeParam = (filterType as string) || 'month';
+  const monthIndexParam = monthIndex ? parseInt(monthIndex as string) : new Date().getMonth();
 
-  const products: Product[] = [
-    { id: '1', name: 'เนื้อหมู', price: 350 },
-    { id: '2', name: 'นมสด', price: 198 },
-    { id: '3', name: 'ผักสลัด', price: 140 },
-    { id: '4', name: 'ไข่ไก่', price: 68 },
-    { id: '5', name: 'ซุปชม', price: 30 },
-    { id: '6', name: 'มาน่า รสหมูสับ', price: 28 },
-    { id: '7', name: 'ปลากระป๋อง', price: 31 },
-  ];
+  useFocusEffect(
+    useCallback(() => {
+      const fetchExpiredProducts = async () => {
+        try {
+          if (!targetLocationId || !isBusiness) {
+            setProducts([]);
+            return;
+          }
 
-  const total = products.reduce((sum, product) => sum + product.price, 0);
+          const data = await getProducts(targetLocationId);
+
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const currentYear = today.getFullYear();
+
+          const expiredProducts = (data || []).filter((item: any) => {
+            if (!item.expiration_date) return false;
+            const expDate = new Date(item.expiration_date);
+            expDate.setHours(0, 0, 0, 0);
+            
+            // Check if expired
+            if (expDate >= today) return false;
+
+            // Filter by month/year
+            if (filterTypeParam === 'year') {
+              // Show all months in current year
+              return expDate.getFullYear() === currentYear;
+            } else {
+              // Show only selected month
+              return expDate.getMonth() === monthIndexParam && expDate.getFullYear() === currentYear;
+            }
+          });
+
+          const formatted = expiredProducts.map((item: any) => ({
+            id: item.id,
+            name: item.product_templates?.name || item.name || '-',
+            quantity: Number(item.quantity || 0),
+            price: Number(item.price || 0),
+          }));
+
+          setProducts(formatted);
+        } catch (error) {
+          console.log('Fetch show list error:', error);
+          setProducts([]);
+        }
+      };
+
+      fetchExpiredProducts();
+    }, [targetLocationId, isBusiness, filterTypeParam, monthIndexParam])
+  );
+
+  const total = useMemo(
+    () => products.reduce((sum, product) => sum + product.quantity * product.price, 0),
+    [products]
+  );
 
   const renderProduct = ({ item, index }: { item: Product; index: number }) => (
     <View style={styles.productRow}>
       <Text style={styles.productNumber}>{index + 1}. </Text>
       <Text style={styles.productName}>{item.name}</Text>
-      <Text style={styles.productPrice}>{item.price} บาท</Text>
+      <Text style={styles.productPrice}>{item.quantity * item.price} บาท</Text>
     </View>
   );
 
@@ -55,58 +105,30 @@ export default function ShowListScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>วัตถุดิบที่หมดอายุ</Text>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={styles.title}>วัตถุดิบที่หมดอายุ</Text>
+            <Text style={styles.subtitle}>
+              {filterTypeParam === 'year' ? '1 ปี' : `เดือน ${months[monthIndexParam]}`}
+            </Text>
+          </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
             <Ionicons name="close" size={28} color="#7C3AED" />
           </TouchableOpacity>
         </View>
 
-        {/* Month Selector */}
-        <View style={styles.monthSelectorContainer}>
-          <TouchableOpacity
-            style={styles.monthButton}
-            onPress={() => setIsDropdownOpen(!isDropdownOpen)}
-          >
-            <Text style={styles.monthButtonText}>เดือน {selectedMonth}</Text>
-            <Ionicons
-              name={isDropdownOpen ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color="#9CA3AF"
-            />
-          </TouchableOpacity>
-
-          {isDropdownOpen && (
-            <View style={styles.dropdown}>
-              {months.map((month) => (
-                <TouchableOpacity
-                  key={month}
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setSelectedMonth(month);
-                    setIsDropdownOpen(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.dropdownItemText,
-                      selectedMonth === month && styles.dropdownItemTextSelected,
-                    ]}
-                  >
-                    {month}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
         {/* Product List Card */}
         <View style={styles.card}>
+          {!isBusiness && (
+            <Text style={styles.emptyText}>หน้านี้แสดงเฉพาะ Business location</Text>
+          )}
           <FlatList
             data={products}
             renderItem={renderProduct}
             keyExtractor={(item) => item.id}
             scrollEnabled={false}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>ไม่มีสินค้าที่หมดอายุ</Text>
+            }
           />
 
           {/* Total */}
@@ -144,57 +166,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#7C3AED',
   },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
   closeButton: {
     position: 'absolute',
     right: 20,
-    top: 12,
+    top: 55,
     padding: 4,
-  },
-  monthSelectorContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    zIndex: 10,
-  },
-  monthButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignSelf: 'flex-end',
-  },
-  monthButtonText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    fontWeight: '400',
-  },
-  dropdown: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginTop: 8,
-    paddingVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-    maxHeight: 200,
-  },
-  dropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  dropdownItemText: {
-    fontSize: 14,
-    color: '#7C3AED',
-  },
-  dropdownItemTextSelected: {
-    fontWeight: '600',
-    color: '#9626C2',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -228,6 +210,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#7C3AED',
     fontWeight: '600',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    marginBottom: 12,
   },
   totalContainer: {
     marginTop: 10,

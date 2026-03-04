@@ -47,6 +47,11 @@ export default function PersonalOverview({ location }: { location: Location }) {
     const canManageProduct = permissions.canManageProduct(role)
     const canManageStorage = permissions.canManageStorage(role)
 
+    const goToStorage = (storageId: string) => {
+        if (!storageId || !location?.id) return
+        router.push(`/storage?storageId=${encodeURIComponent(storageId)}&locationId=${encodeURIComponent(location.id)}&context=${encodeURIComponent(location.type)}`)
+    }
+
     const fetchAllData = async () => {
         try {
             setLoadingStorages(true)
@@ -377,7 +382,8 @@ export default function PersonalOverview({ location }: { location: Location }) {
                                 overshootRight={false}
                                 rightThreshold={40}
                             >
-                                <View
+                                <TouchableOpacity
+                                    onPress={() => goToStorage(item.id)}
                                     style={[
                                         styles.storageItem,
                                         {
@@ -415,11 +421,12 @@ export default function PersonalOverview({ location }: { location: Location }) {
                                             {item.item_count ?? 0}
                                         </Text>
                                     </View>
-                                </View>
+                                </TouchableOpacity>
                             </Swipeable>
                         ) : (
-                            <View
+                            <TouchableOpacity
                                 key={item.id}
+                                onPress={() => goToStorage(item.id)}
                                 style={[
                                     styles.storageItem,
                                     {
@@ -457,7 +464,7 @@ export default function PersonalOverview({ location }: { location: Location }) {
                                         {item.item_count ?? 0}
                                     </Text>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         );
                     })}
                     {canManageStorage && (

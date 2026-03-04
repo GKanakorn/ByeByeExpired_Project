@@ -1,6 +1,6 @@
 // src/profile.tsx
 import React, { useState, useEffect } from 'react';
-import { Modal } from 'react-native';
+import { Modal, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import {
   View,
@@ -26,6 +26,7 @@ import {
 } from "../src/api/profile.api"
 import * as ImagePicker from 'expo-image-picker';
 import { getDeletedHistory } from "../src/api/product.api";
+import { deleteAccount as deleteAccountAPI } from "../src/api/auth.api";
 
 
 export default function ProfilePage() {
@@ -186,6 +187,50 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'ยืนยันการลบบัญชี',
+      'คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี? การกระทำนี้ไม่สามารถย้อนกลับได้ และข้อมูลทั้งหมดที่คุณสร้างจะถูกลบถาวร',
+      [
+        {
+          text: 'ยกเลิก',
+          style: 'cancel',
+        },
+        {
+          text: 'ลบบัญชี',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const token = sessionData?.session?.access_token;
+              if (!token) {
+                alert('ไม่พบ token การยืนยันตัวตน');
+                return;
+              }
+
+              await deleteAccountAPI(token);
+              
+              // Sign out and clear local data
+              await supabase.auth.signOut();
+              setUserId(null);
+              setAvatarUrl(null);
+              setFullName('');
+              setEmail('');
+              setTotalItems(0);
+              setNearExpireItems(0);
+              setExpiredItems(0);
+
+              alert('ลบบัญชีสำเร็จ');
+              router.replace('/');
+            } catch (error: any) {
+              alert(error.message || 'ลบบัญชีไม่สำเร็จ');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const monthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -198,14 +243,15 @@ export default function ProfilePage() {
         .includes(searchText.toLowerCase());
 
     const itemDate = new Date(item.deleted_at);
-    const today = new Date();
-
     let matchesDate = true;
 
     if (selectedRange === 'WEEK') {
       const now = new Date();
+      now.setHours(23, 59, 59, 999); // End of today
+      
       const startDate = new Date();
       startDate.setDate(now.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0); // Start of day 7 days ago
 
       matchesDate =
         itemDate >= startDate &&
@@ -214,8 +260,11 @@ export default function ProfilePage() {
 
     if (selectedRange === 'MONTH') {
       const now = new Date();
+      now.setHours(23, 59, 59, 999); // End of today
+      
       const startDate = new Date();
       startDate.setDate(now.getDate() - 30);
+      startDate.setHours(0, 0, 0, 0); // Start of day 30 days ago
 
       matchesDate =
         itemDate >= startDate &&
@@ -246,9 +295,6 @@ export default function ProfilePage() {
         <View style={styles.headerIcons}>
           <TouchableOpacity onPress={() => router.push('/overview')} style={styles.iconButton}>
             <Ionicons name="home" size={26} color="#6B7280" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/setting')} style={styles.iconButton}>
-            <Ionicons name="settings" size={26} color="#6B7280" />
           </TouchableOpacity>
         </View>
 
@@ -372,8 +418,8 @@ export default function ProfilePage() {
             <View style={styles.quickFilterContainer}>
               {[
                 { label: 'All', value: 'ALL' },
-                { label: 'Last Week', value: 'WEEK' },
-                { label: 'Last Month', value: 'MONTH' },
+                { label: '7 Days Ago', value: 'WEEK' },
+                { label: '30 Days Ago', value: 'MONTH' },
                 {
                   label:
                     selectedMonth !== null && selectedYear !== null
@@ -550,7 +596,9 @@ export default function ProfilePage() {
                         <View style={styles.detailItem}>
                           <Ionicons name="person-outline" size={12} color="#7C3AED" />
                           <Text style={styles.historyDetail}>
-                            You
+                            {item.deleted_by === userId 
+                              ? 'You' 
+                              : item.deleted_by_profile?.full_name || 'Unknown'}
                           </Text>
                         </View>
                       </View>
@@ -578,6 +626,23 @@ export default function ProfilePage() {
             <Text style={styles.signOutText}>Sign Out</Text>
           </LinearGradient>
         </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity
+          style={styles.deleteAccountButton}
+          activeOpacity={0.8}
+          onPress={handleDeleteAccount}
+        >
+          <LinearGradient
+            colors={['#DC2626', '#B91C1C']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.deleteAccountGradient}
+          >
+            <Ionicons name="trash-outline" size={18} color="#fff" />
+            <Text style={styles.deleteAccountText}>ลบบัญชี</Text>
+          </LinearGradient>
+        </TouchableOpacity>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -595,9 +660,10 @@ const styles = StyleSheet.create({
   },
   headerIcons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     marginBottom: 12,
+    paddingHorizontal: 16,
   },
   iconButton: {
     width: 44,
@@ -843,6 +909,31 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   signOutText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  deleteAccountButton: {
+    marginTop: 10,
+    borderRadius: 20,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    width: '50%',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  deleteAccountGradient: {
+    flexDirection: 'row',
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 20,
+  },
+  deleteAccountText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',

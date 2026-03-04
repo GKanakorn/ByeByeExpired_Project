@@ -8,8 +8,10 @@ import {
   Switch,
   Modal,
   Platform,
-  Alert
+  Alert,
+  Animated
 } from 'react-native';
+import { BlurView } from 'expo-blur'
 import { useEffect, useState } from 'react';
 import React from 'react'
 import { Picker } from '@react-native-picker/picker';
@@ -22,9 +24,11 @@ import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
 import { getStoragesByLocation } from '../src/api/storage.api'
 import { supabase } from '../src/supabase'
-import { getSuppliers } from '@/src/api/supplier.api';
-import { updateProduct, deleteProduct } from '../src/api/product.api';
+import { getSuppliersByLocation, getSupplierById } from '@/src/api/supplier.api';
+import { updateProduct, deleteProductQuantity } from '../src/api/product.api';
 import { getProductById } from '../src/api/product.api'
+import { permissions } from '../src/utils/permissions'
+import { useLocation } from '../src/context/LocationContext'
 
 interface Option {
   label: string;
@@ -41,6 +45,9 @@ interface DropdownProps {
 
 export default function showDetailBusiness() {
   const router = useRouter();
+  const { currentLocation } = useLocation()
+  const role = currentLocation?.role
+  const canManageProduct = role ? permissions.canManageProduct(role) : false
 
   const {
     productId,
@@ -67,6 +74,32 @@ export default function showDetailBusiness() {
   const [quantity, setQuantity] = useState<string>('')
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [notifyDays, setNotifyDays] = useState('')
+
+  // delete modal states
+  const [showDeleteQtyModal, setShowDeleteQtyModal] = useState(false)
+  const [deleteQty, setDeleteQty] = useState(1)
+
+  const [toastMsg, setToastMsg] = useState('')
+  const [toastVisible, setToastVisible] = useState(false)
+  const toastOpacity = React.useRef(new Animated.Value(0)).current
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg)
+    setToastVisible(true)
+    Animated.timing(toastOpacity, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setTimeout(() => {
+        Animated.timing(toastOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start(() => setToastVisible(false))
+      }, 2000)
+    })
+  }
   const [store, setStore] = useState('');
   const [lowStock, setLowStock] = useState(false);
   const [expireAlert, setExpireAlert] = useState(false)
@@ -74,8 +107,18 @@ export default function showDetailBusiness() {
   const [lowStockThreshold, setLowStockThreshold] = useState<string>('')
   const [supplierOptions, setSupplierOptions] = useState<Option[]>([])
   const [supplier, setSupplier] = useState<string | null>(null)
+  const [supplierName, setSupplierName] = useState('')
+
+  const supplierDisplayName =
+    supplierOptions.find((s) => s.value === supplier)?.label ||
+    supplierName ||
+    '-'
 
   const handleSave = async () => {
+    if (!canManageProduct) {
+      Alert.alert('Permission denied', 'You do not have permission to edit this product')
+      return
+    }
     try {
       setUploading(true)
 
@@ -145,8 +188,9 @@ export default function showDetailBusiness() {
 
         const data = await getProductById(productId as string)
 
-        setName(data.product_templates?.name ?? '')
-        setCategory(data.product_templates?.category ?? '')
+        // prefer product-specific fields, template only as fallback
+        setName(data.name ?? data.product_templates?.name ?? '')
+        setCategory(data.category ?? data.product_templates?.category ?? '')
         setImage(data.product_templates?.image_url ?? null)
         setQuantity(data.quantity?.toString() ?? '')
         setStorage(data.storage_id ?? '')
@@ -158,6 +202,11 @@ export default function showDetailBusiness() {
         setNotifyDays(data.notify_before_days?.toString() ?? '')
         setPrice(data.price?.toString() ?? '')
         setSupplier(data.supplier_id ?? '')
+        setSupplierName(
+          data?.suppliers?.company_name ??
+          data?.supplier?.company_name ??
+          ''
+        )
         setLowStock(data.low_stock_enabled ?? false)
         setLowStockThreshold(data.low_stock_threshold?.toString() ?? '')
         console.log("FULL PRODUCT DATA:", data)
@@ -169,6 +218,26 @@ export default function showDetailBusiness() {
 
     fetchProduct()
   }, [productId])
+
+  useEffect(() => {
+    if (!canManageProduct || !supplier || supplierName) return
+
+    const fetchSupplierName = async () => {
+      try {
+        if (!locationId) return
+        const supplierData = await getSupplierById(supplier, locationId as string)
+        const name =
+          supplierData?.company_name ||
+          supplierData?.data?.company_name ||
+          ''
+        if (name) setSupplierName(name)
+      } catch (err) {
+        console.log('Fetch supplier by id error:', err)
+      }
+    }
+
+    fetchSupplierName()
+  }, [supplier, supplierName, canManageProduct])
   
   useFocusEffect(
     React.useCallback(() => {
@@ -180,7 +249,12 @@ export default function showDetailBusiness() {
 
           if (!session) return
 
-          const suppliers = await getSuppliers(session.access_token)
+          if (!locationId) return
+
+          const suppliers = await getSuppliersByLocation(
+            session.access_token,
+            locationId as string
+          )
 
           const formatted: Option[] = [
             ...suppliers.map((s: any) => ({
@@ -200,7 +274,7 @@ export default function showDetailBusiness() {
       }
 
       fetchSuppliers()
-    }, [])
+    }, [locationId])
   )
 
   useFocusEffect(
@@ -267,6 +341,7 @@ export default function showDetailBusiness() {
     return (
       <>
         <TouchableOpacity
+          disabled={!canManageProduct}
           style={[
             styles.customDropdown,
             openDropdown === type && styles.dropdownActive
@@ -298,6 +373,7 @@ export default function showDetailBusiness() {
 
         <Modal transparent visible={openDropdown === type} animationType="fade">
           <TouchableOpacity
+            disabled={!canManageProduct}
             style={styles.overlay}
             activeOpacity={1}
             onPress={() => setOpenDropdown(null)}
@@ -326,6 +402,7 @@ export default function showDetailBusiness() {
                       if (type === 'supplier') {
                         router.push({
                           pathname: '/addSupplier',
+                          params: { locationId: locationId ?? '' },
                         });
                         return;
                       }
@@ -360,25 +437,41 @@ export default function showDetailBusiness() {
             <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
               <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
-              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Save</Text>
-            </TouchableOpacity>
+
+            {canManageProduct && (
+              <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
+                <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Save</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <Text style={styles.headerTitle}>
-            Edit Product
+            {canManageProduct ? 'Edit Product' : 'View Product'}
           </Text>
 
-          <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
-            {image ? (
-              <Image
-                source={{ uri: image }}
-                style={{ width: 120, height: 120, borderRadius: 8 }}
-              />
-            ) : (
-              <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
-            )}
-          </TouchableOpacity>
+          {canManageProduct ? (
+            <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
+              {image ? (
+                <Image
+                  source={{ uri: image }}
+                  style={{ width: 120, height: 120, borderRadius: 8 }}
+                />
+              ) : (
+                <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.imageBox}>
+              {image ? (
+                <Image
+                  source={{ uri: image }}
+                  style={{ width: 120, height: 120, borderRadius: 8 }}
+                />
+              ) : (
+                <Text style={{ color: '#999' }}>No Image</Text>
+              )}
+            </View>
+          )}
         </View>
 
         <View style={styles.card}>
@@ -387,6 +480,7 @@ export default function showDetailBusiness() {
             style={styles.input}
             value={name}
             onChangeText={setName}
+            editable={canManageProduct}
           />
 
           <Text style={styles.label}>Category</Text>
@@ -414,28 +508,42 @@ export default function showDetailBusiness() {
           />
 
           <Text style={styles.label}>Storage Date</Text>
-          <TouchableOpacity
-            style={styles.inputIcon}
-            onPress={() => {
-              setTempDate(storageDate);
-              setShowStorage(true);
-            }}
-          >
-            <Text>{storageDate.toDateString()}</Text>
-            <Ionicons name="calendar-outline" size={20} color="#888" />
-          </TouchableOpacity>
+
+          {canManageProduct ? (
+            <TouchableOpacity
+              style={styles.inputIcon}
+              onPress={() => {
+                setTempDate(storageDate);
+                setShowStorage(true);
+              }}
+            >
+              <Text>{storageDate.toDateString()}</Text>
+              <Ionicons name="calendar-outline" size={20} color="#888" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.inputIcon}>
+              <Text>{storageDate.toDateString()}</Text>
+            </View>
+          )}
 
           <Text style={styles.label}>Expiration Date</Text>
-          <TouchableOpacity
-            style={styles.inputIcon}
-            onPress={() => {
-              setTempDate(expireDate);
-              setShowExpire(true);
-            }}
-          >
-            <Text>{expireDate.toDateString()}</Text>
-            <Ionicons name="calendar-outline" size={20} color="#888" />
-          </TouchableOpacity>
+
+          {canManageProduct ? (
+            <TouchableOpacity
+              style={styles.inputIcon}
+              onPress={() => {
+                setTempDate(expireDate);
+                setShowExpire(true);
+              }}
+            >
+              <Text>{expireDate.toDateString()}</Text>
+              <Ionicons name="calendar-outline" size={20} color="#888" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.inputIcon}>
+              <Text>{expireDate.toDateString()}</Text>
+            </View>
+          )}
 
           <Text style={styles.label}>Quantity</Text>
           <TextInput
@@ -443,6 +551,7 @@ export default function showDetailBusiness() {
             keyboardType="numeric"
             value={quantity}
             onChangeText={setQuantity}
+            editable={canManageProduct}
           />
 
           <Text style={styles.label}>Price</Text>
@@ -451,137 +560,258 @@ export default function showDetailBusiness() {
             keyboardType="numeric"
             value={price}
             onChangeText={setPrice}
+            editable={canManageProduct}
           />
 
           <Text style={styles.label}>Supplier</Text>
-          <Dropdown
-            label="Select Supplier"
-            value={supplier ?? ''}
-            type="supplier"
-            onSelect={(value) => setSupplier(value)}
-            options={supplierOptions}
-          />
-          <View style={styles.switchRow}>
-            <Text>Days before expiration</Text>
-            <Switch
-              value={notifyEnabled}
-              onValueChange={(value) => {
-                setNotifyEnabled(value)
-                if (!value) {
-                  setNotifyDays('')   // 🔥 เคลียร์ค่าทันทีเมื่อปิด switch
-                }
-              }}
+          {canManageProduct ? (
+            <Dropdown
+              label="Select Supplier"
+              value={supplier ?? ''}
+              type="supplier"
+              onSelect={(value) => setSupplier(value)}
+              options={supplierOptions}
             />
-          </View>
+          ) : (
+            <View style={styles.readOnlyInfo}>
+              <Text style={styles.readOnlyValue}>{supplierDisplayName}</Text>
+            </View>
+          )}
+
+          {canManageProduct && (
+            <View style={styles.switchRow}>
+              <Text>Days before expiration</Text>
+              <Switch
+                value={notifyEnabled}
+                onValueChange={(value) => {
+                  setNotifyEnabled(value)
+                  if (!value) {
+                    setNotifyDays('')
+                  }
+                }}
+              />
+            </View>
+          )}
 
           {notifyEnabled && (
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={notifyDays}
-              onChangeText={setNotifyDays}
-              placeholder="Enter days before expiration"
-            />
+            canManageProduct ? (
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={notifyDays}
+                onChangeText={setNotifyDays}
+                placeholder="Enter days before expiration"
+              />
+            ) : (
+              <>
+                <Text style={styles.label}>Days before expiration</Text>
+                <View style={styles.readOnlyInfo}>
+                  <Text style={styles.readOnlyValue}>{notifyDays || '-'}</Text>
+                </View>
+              </>
+            )
           )}
 
-          <View style={styles.switchRow}>
-            <Text>Low Stock Alert</Text>
-            <Switch
-              value={lowStock}
-              onValueChange={(value) => {
-                setLowStock(value)
-                if (!value) setLowStockThreshold('')
-              }}
-            />
-          </View>
+          {canManageProduct && (
+            <View style={styles.switchRow}>
+              <Text>Low Stock Alert</Text>
+              <Switch
+                value={lowStock}
+                onValueChange={(value) => {
+                  setLowStock(value)
+                  if (!value) setLowStockThreshold('')
+                }}
+              />
+            </View>
+          )}
 
           {lowStock && (
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={lowStockThreshold}
-              onChangeText={setLowStockThreshold}
-              placeholder="Enter low stock threshold"
-            />
+            canManageProduct ? (
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={lowStockThreshold}
+                onChangeText={setLowStockThreshold}
+                placeholder="Enter low stock threshold"
+              />
+            ) : (
+              <>
+                <Text style={styles.label}>Low Stock Alert</Text>
+                <View style={styles.readOnlyInfo}>
+                  <Text style={styles.readOnlyValue}>{lowStockThreshold || '-'}</Text>
+                </View>
+              </>
+            )
           )}
         </View>
-        <TouchableOpacity
-          style={styles.deleteButton}
-          activeOpacity={0.85}
-          onPress={() => {
-            Alert.alert(
-              'Delete Product',
-              'คุณต้องการลบสินค้านี้หรือไม่?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete',
-                  style: 'destructive',
-                  onPress: async () => {
-                    if (!productId) return
 
+        {canManageProduct && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            activeOpacity={0.85}
+            onPress={() => {
+              setDeleteQty(1)
+              setShowDeleteQtyModal(true)
+            }}
+          >
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        )}
+
+        {toastVisible && (
+          <Animated.View style={[styles.toast, { opacity: toastOpacity }]}> 
+            <Text style={styles.toastText}>{toastMsg}</Text>
+          </Animated.View>
+        )}
+
+        <Modal visible={showDeleteQtyModal} transparent animationType="slide">
+          <BlurView intensity={40} tint="dark" style={styles.bottomOverlay}>
+            <View style={styles.modalBox}>
+              <View style={styles.handle} />
+              <Text style={styles.modalTitle}>ลบสินค้าออกจากสต๊อก</Text>
+              <View style={styles.sectionDivider} />
+
+              <View style={styles.productRow}>
+                <Image
+                  source={{ uri: image || 'https://via.placeholder.com/100' }}
+                  style={styles.modalImage}
+                />
+                <View style={{ marginLeft: 50 }}>
+                  <Text style={styles.name}>{name}</Text>
+                  <Text style={styles.detail}>{quantity} piece</Text>
+                  <Text style={styles.exp}>
+                    EXP : {expireDate.toLocaleDateString('en-GB')}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.sectionDivider} />
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>จำนวนที่ต้องการลบ</Text>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+                <TouchableOpacity onPress={() => setDeleteQty(Number(quantity) || 0)}>
+                  <Text style={{ color: '#007aff', marginRight: 20 }}>All</Text>
+                </TouchableOpacity>
+                <View style={styles.counter}>
+                  <TouchableOpacity
+                    style={styles.counterBtn}
+                    onPress={() => setDeleteQty((q) => (q > 1 ? q - 1 : 1))}
+                  >
+                    <Text style={styles.counterText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.divider} />
+                  <View style={styles.qtyBox}>
+                    <Text style={styles.qty}>{deleteQty}</Text>
+                  </View>
+                  <View style={styles.divider} />
+                  <TouchableOpacity
+                    style={styles.counterBtn}
+                    onPress={() => {
+                      const max = Number(quantity) || 0
+                      setDeleteQty((q) => (q < max ? q + 1 : q))
+                    }}
+                  >
+                    <Text style={styles.counterText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.rowBtn}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setShowDeleteQtyModal(false)}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: '500' }}>ยกเลิก</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmBtn}
+                  onPress={async () => {
+                    if (!productId) return
+                    const num = deleteQty
+                    const curQty = Number(quantity) || 0
+                    if (!num || num <= 0) {
+                      Alert.alert('Error', 'จำนวนไม่ถูกต้อง')
+                      return
+                    }
+                    if (num > curQty) {
+                      showToast('ไม่สามารถลบเกินจำนวนที่มีอยู่')
+                      return
+                    }
                     try {
-                      await deleteProduct(productId as string)
-                      Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
-                      router.replace('/overview')
+                      // use shared API helper
+                      await deleteProductQuantity(productId as string, num)
+
+                      const curQty = Number(quantity) || 0
+                      if (num >= curQty) {
+                        Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
+                        router.replace('/overview')
+                      } else {
+                        setQuantity((curQty - num).toString())
+                        Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
+                        router.replace('/overview')
+                      }
                     } catch (err: any) {
                       Alert.alert('Error', err.message || 'Delete failed')
+                    } finally {
+                      setShowDeleteQtyModal(false)
                     }
-                  }
-                }
-              ]
-            )
-          }}
-        >
-          <Text style={styles.deleteButtonText}>Delete</Text>
-        </TouchableOpacity>
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '500' }}>ยืนยัน</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </BlurView>
+        </Modal>
       </ScrollView>
       {/* ===== CALENDAR MODAL ===== */}
-      <Modal transparent animationType="fade" visible={showStorage || showExpire}>
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => {
-            setShowStorage(false);
-            setShowExpire(false);
-          }}
-        >
-          <TouchableOpacity activeOpacity={1} style={styles.calendarBox}>
-            <DateTimePicker
-              value={tempDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-              accentColor="#5B5FC7"
-              themeVariant="light"
-              onChange={(e: any, d?: Date) => {
-                if (d) setTempDate(d);
-              }}
-            />
-
-            <View style={styles.calendarActions}>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowStorage(false);
-                  setShowExpire(false);
+      {canManageProduct && (
+        <Modal transparent animationType="fade" visible={showStorage || showExpire}>
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={() => {
+              setShowStorage(false);
+              setShowExpire(false);
+            }}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.calendarBox}>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                accentColor="#5B5FC7"
+                themeVariant="light"
+                onChange={(e: any, d?: Date) => {
+                  if (d) setTempDate(d);
                 }}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
+              />
 
-              <TouchableOpacity
-                onPress={() => {
-                  if (showStorage) setStorageDate(tempDate);
-                  if (showExpire) setExpireDate(tempDate);
-                  setShowStorage(false);
-                  setShowExpire(false);
-                }}
-              >
-                <Text style={styles.okText}>OK</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={styles.calendarActions}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowStorage(false);
+                    setShowExpire(false);
+                  }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    if (showStorage) setStorageDate(tempDate);
+                    if (showExpire) setExpireDate(tempDate);
+                    setShowStorage(false);
+                    setShowExpire(false);
+                  }}
+                >
+                  <Text style={styles.okText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        </Modal>
+      )}
     </LinearGradient>
   );
 }
@@ -665,6 +895,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
 
+  readOnlyInfo: {
+    backgroundColor: '#F2F2F2',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 6,
+  },
+
+  readOnlyValue: {
+    color: '#1f1f1f',
+    fontSize: 15,
+  },
+
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -676,6 +919,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(34,34,34,0.35)',
     justifyContent: 'center',
+    alignItems: 'center'
+  },
+  bottomOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(34,34,34,0.35)',
+    justifyContent: 'flex-end',
     alignItems: 'center'
   },
 
@@ -727,6 +976,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#91a7f0ff'
   },
+  modalBox: {
+    width: '100%',
+    height: 'auto',
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    alignSelf: 'center',
+    width: '100%',
+    marginTop: 15,
+    marginBottom: 25,
+    lineHeight: 26,
+  },
   calendarBox: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -765,5 +1034,111 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold'
+  },
+  modalImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e5e5eaff',
+    marginRight: 5,
+  },
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    paddingHorizontal: 15,
+  },
+  exp: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  counter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e6e7f0ff',
+    borderRadius: 15,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginVertical: 15,
+  },
+  qty: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    paddingHorizontal: 20,
+  },
+  counterBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f4f6ff',
+  },
+  counterText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#080808ff',
+  },
+  qtyBox: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  divider: {
+    width: 1,
+    backgroundColor: '#c5ccff',
+    height: '100%',
+  },
+  rowBtn: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 35,
+    width: '100%',
+  },
+  cancelBtn: {
+    backgroundColor: '#ddd',
+    paddingVertical: 16,
+    paddingHorizontal: 50,
+    borderRadius: 15,
+    marginHorizontal: 10,
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  toastText: {
+    color: '#fff',
+  },
+  confirmBtn: {
+    backgroundColor: '#9aa8ff',
+    paddingVertical: 16,
+    paddingHorizontal: 50,
+    borderRadius: 15,
+    marginHorizontal: 10,
+  },
+  handle: {
+    width: 50,
+    height: 5,
+    backgroundColor: '#ddd',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 15,
+  },
+  sectionDivider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: "#e6e7f0",
+    marginVertical: 15,
   },
 });

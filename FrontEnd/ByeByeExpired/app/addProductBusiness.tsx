@@ -23,7 +23,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
 import { getStoragesByLocation } from '../src/api/storage.api'
 import { supabase } from '../src/supabase'
-import { getSuppliers } from '@/src/api/supplier.api';
+import { getSuppliersByLocation } from '@/src/api/supplier.api';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 
@@ -101,7 +101,12 @@ export default function AddProductScreen() {
 
           if (!session) return
 
-          const suppliers = await getSuppliers(session.access_token)
+          if (!locationId) return
+
+          const suppliers = await getSuppliersByLocation(
+            session.access_token,
+            locationId as string
+          )
 
           const formatted: Option[] = [
             ...suppliers.map((s: any) => ({
@@ -121,7 +126,7 @@ export default function AddProductScreen() {
       }
 
       fetchSuppliers()
-    }, [])
+    }, [locationId])
   )
 
   useFocusEffect(
@@ -345,6 +350,7 @@ export default function AddProductScreen() {
                       if (type === 'supplier') {
                         router.push({
                           pathname: '/addSupplier',
+                          params: { locationId: locationId ?? '' },
                         });
                         return;
                       }

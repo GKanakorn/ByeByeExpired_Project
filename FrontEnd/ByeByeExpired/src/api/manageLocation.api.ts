@@ -73,7 +73,8 @@ export async function inviteMemberToLocation(
   token: string,
   locationId: string,
   email: string,
-  role: string
+  role: string,
+  invitedByName?: string,
 ) {
   const res = await fetch(
     `${API_URL}/api/locations/${locationId}/members`,
@@ -83,7 +84,7 @@ export async function inviteMemberToLocation(
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ email, role }),
+      body: JSON.stringify({ email: email.toLowerCase().trim(), role, invitedByName }),
     }
   );
 

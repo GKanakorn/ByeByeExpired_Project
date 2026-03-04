@@ -9,8 +9,10 @@ import {
   TextInputKeyPressEventData,
 } from 'react-native'
 import { supabase } from '../src/supabase'
+import { confirmAndCreateProfile } from '../src/api/auth.api'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useRef, useState, useEffect } from 'react'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export default function ConfirmEmailScreen() {
   const { email } = useLocalSearchParams<{ email: string }>()
@@ -87,19 +89,57 @@ export default function ConfirmEmailScreen() {
     if (!email || code.length !== 6) return
 
     setLoading(true)
-    const { error } = await supabase.auth.verifyOtp({
+    const { error, data } = await supabase.auth.verifyOtp({
       email,
       token: code,
       type: 'signup',
     })
-    setLoading(false)
-
+    
     if (error) {
+      setLoading(false)
       Alert.alert('Error', 'OTP ไม่ถูกต้องหรือหมดอายุ')
       return
     }
 
-    router.replace('/overview')
+    try {
+      // ✅ Get user info from session
+      const user = data.user
+      if (!user) {
+        throw new Error('ไม่พบ user หลัง verify OTP')
+      }
+
+      console.log('[OTP VERIFIED] UID:', user.id)
+
+      // ✅ Call backend to create profile + locations
+      const fullName = user.user_metadata?.full_name || email.split('@')[0]
+      await confirmAndCreateProfile({
+        userId: user.id,
+        email: user.email || email,
+        fullName,
+      })
+
+      console.log('[PROFILE CREATED] Profile created successfully')
+
+      // ⏳ Wait for database trigger to complete (locations creation)
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      console.log('[OTP] Waited for locations to be created')
+
+      // ✅ Save token and set session for future API calls
+      if (data.session) {
+        await AsyncStorage.setItem('token', data.session.access_token)
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        })
+      }
+
+      setLoading(false)
+      router.replace('/overview')
+    } catch (err: any) {
+      setLoading(false)
+      console.error('Error creating profile:', err)
+      Alert.alert('Error', err.message || 'ล้มเหลวในการสร้าง profile')
+    }
   }
 
   const handleResend = async () => {

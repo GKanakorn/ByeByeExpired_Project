@@ -265,7 +265,7 @@ export default function ScanBarcodeScreen() {
         <Text style={styles.title}>
           {mode === 'add' ? 'สแกนเพื่อเพิ่มสินค้า' : 'สแกนเพื่อลบสินค้า'}
         </Text>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => router.push('/overview')}>
           <Ionicons name="close" size={24} color="white" />
         </TouchableOpacity>
       </View>

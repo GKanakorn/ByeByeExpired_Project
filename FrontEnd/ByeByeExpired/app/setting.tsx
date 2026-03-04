@@ -221,14 +221,6 @@ export default function SettingScreen() {
 
 
 
-                {/* Delete Account */}
-                <View style={styles.deleteBox}>
-                    <TouchableOpacity style={styles.deleteBtn}>
-                        <Text style={styles.deleteText}>
-                            ลบบัญชี
-                        </Text>
-                    </TouchableOpacity>
-                </View>
             </SafeAreaView>
         </LinearGradient>
     );
@@ -416,27 +408,5 @@ const styles = StyleSheet.create({
 
     addAdminText: {
         fontSize: 14,
-    },
-
-    deleteBox: {
-        marginTop: "auto",
-        alignItems: "flex-start", // ⭐ จาก center เป็นซ้าย
-        marginBottom: 25,
-        marginLeft: 40,           // ⭐ ระยะห่างจากขอบซ้าย
-    },
-
-    deleteBtn: {
-        borderWidth: 1.5,
-        borderColor: "#f7f1f0ff",
-        paddingHorizontal: 40,
-        paddingVertical: 10,
-        borderRadius: 15,
-        backgroundColor: "#FFF",
-    },
-
-    deleteText: {
-        color: "#d21714ff",
-        fontSize: 16,
-        fontWeight: "600",
     },
 });

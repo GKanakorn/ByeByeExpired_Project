@@ -1,40 +1,65 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, G } from 'react-native-svg';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+import { useLocation } from '../src/context/LocationContext';
+import { getProducts } from '../src/api/product.api';
 
 // Dashboard สำหรับแสดงสรุปข้อมูลวัตถุดิบที่ถูกทิ้ง พร้อม Bar Chart และ Pie Chart
 // ใช้สำหรับติดตามและวิเคราะห์ข้อมูลการสูญเสียวัตถุดิบรายเดือน
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
-const summary = {
-  totalItems: 20,
-  totalLoss: 845,
+type Product = {
+  id: string;
+  quantity?: number;
+  price?: number;
+  expiration_date?: string;
+  category?: string;
+  product_templates?: {
+    name?: string;
+    category?: string;
+    image_url?: string;
+  } | null;
 };
 
-const barData = [
-  { date: "8 ม.ค.", loss: 305 },
-  { date: "11 ม.ค.", loss: 255 },
-  { date: "22 ม.ค.", loss: 285 },
-];
+type FilterType = 'month' | 'year';
 
-const pieData = [
-  { name: "เนื้อหมู", value: 350, color: "#8B5CF6" },
-  { name: "นมสด", value: 198, color: "#EC4899" },
-  { name: "ผักสลัด", value: 140, color: "#34D399" },
-  { name: "ไข่ไก่", value: 68, color: "#FBBF24" },
-  { name: "ซุปยา", value: 30, color: "#60A5FA" },
-];
+const PIE_COLORS = ['#8B5CF6', '#EC4899', '#34D399', '#FBBF24', '#60A5FA'];
 
-const maxLoss = Math.max(...barData.map(d => d.loss));
-const totalPieValue = pieData.reduce((sum, item) => sum + item.value, 0);
+const categoryNameMap: Record<string, string> = {
+  veg: 'Vegetables & Fruits',
+  meat: 'Meat & Poultry',
+  egg: 'Egg & Dairy',
+  processed: 'Processed Foods',
+  drink: 'Beverages',
+};
+
+// Helper function to get previous month
+const getPreviousMonth = () => {
+  const today = new Date();
+  const month = today.getMonth();
+  return month === 0 ? 11 : month - 1; // 0-11 index
+};
+
+const getCategoryLabel = (raw?: string) => {
+  if (!raw) return 'Uncategorized';
+  return categoryNameMap[raw] || raw;
+};
+
+const calcLoss = (product: Product) => {
+  const quantity = Number(product.quantity || 0);
+  const price = Number(product.price || 0);
+  return quantity * price;
+};
 
 // Pie Chart Component
-const PieChart = () => {
+const PieChart = ({ pieData, totalPieValue }: { pieData: Array<{ name: string; value: number; color: string }>; totalPieValue: number }) => {
   const size = 140;
   const strokeWidth = 30;
   const radius = (size - strokeWidth) / 2;
@@ -78,8 +103,139 @@ const PieChart = () => {
 
 export default function LossDashboard() {
   const router = useRouter();
-  const [selectedMonth, setSelectedMonth] = useState('ม.ค.');
+  const { currentLocation } = useLocation();
+  
+  const previousMonthIndex = getPreviousMonth();
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(previousMonthIndex);
+  const [filterType, setFilterType] = useState<FilterType>('month'); // 'month' or 'year'
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  const isBusiness = currentLocation?.type === 'business';
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchDashboardProducts = async () => {
+        try {
+          if (!currentLocation?.id || !isBusiness) {
+            setProducts([]);
+            return;
+          }
+
+          const data = await getProducts(currentLocation.id);
+          setProducts(data || []);
+        } catch (error) {
+          console.log('Fetch dashboard products error:', error);
+          setProducts([]);
+        }
+      };
+
+      fetchDashboardProducts();
+    }, [currentLocation?.id, isBusiness])
+  );
+
+  const {
+    totalExpiredQuantity,
+    totalLoss,
+    barData,
+    pieData,
+    totalPieValue,
+  } = useMemo(() => {
+    if (!isBusiness) {
+      return {
+        expiredInSelectedMonth: [] as Product[],
+        totalExpiredQuantity: 0,
+        totalLoss: 0,
+        barData: [] as Array<{ date: string; loss: number; dateObj: Date }>,
+        pieData: [] as Array<{ name: string; value: number; color: string }>,
+        totalPieValue: 0,
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentYear = today.getFullYear();
+
+    const expiredAll = (products || []).filter((item) => {
+      if (!item.expiration_date) return false;
+      const expDate = new Date(item.expiration_date);
+      expDate.setHours(0, 0, 0, 0);
+      return expDate < today;
+    });
+
+    // Filter by selected month or all of current year
+    const expiredByPeriod = expiredAll.filter((item) => {
+      if (!item.expiration_date) return false;
+      const expDate = new Date(item.expiration_date);
+      
+      if (filterType === 'year') {
+        // Show all months in current year
+        return expDate.getFullYear() === currentYear;
+      } else {
+        // Show only selected month
+        return expDate.getMonth() === selectedMonthIndex && expDate.getFullYear() === currentYear;
+      }
+    });
+
+    const quantitySum = expiredByPeriod.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0
+    );
+
+    const totalLossAmount = expiredByPeriod.reduce(
+      (sum, item) => sum + calcLoss(item),
+      0
+    );
+
+    const byDate = new Map<string, { loss: number; dateObj: Date }>();
+    expiredByPeriod.forEach((item) => {
+      if (!item.expiration_date) return;
+      const expDate = new Date(item.expiration_date);
+      const key = expDate.toISOString().slice(0, 10);
+      const existing = byDate.get(key);
+      const itemLoss = calcLoss(item);
+      byDate.set(key, {
+        loss: (existing?.loss || 0) + itemLoss,
+        dateObj: expDate,
+      });
+    });
+
+    const dateLossData = Array.from(byDate.entries())
+      .map(([_, value]) => ({
+        date: `${value.dateObj.getDate()} ${months[value.dateObj.getMonth()]}`,
+        loss: Math.round(value.loss),
+        dateObj: value.dateObj,
+      }))
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+      .slice(0, 5);
+
+    const byCategory = new Map<string, number>();
+    expiredByPeriod.forEach((item) => {
+      const categoryKey = (item.product_templates?.category || item.category || '').toString();
+      const label = getCategoryLabel(categoryKey);
+      byCategory.set(label, (byCategory.get(label) || 0) + calcLoss(item));
+    });
+
+    const categoryLossData = Array.from(byCategory.entries())
+      .map(([name, value]) => ({ name, value: Math.round(value) }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5)
+      .map((item, index) => ({
+        ...item,
+        color: PIE_COLORS[index % PIE_COLORS.length],
+      }));
+
+    return {
+      expiredInSelectedMonth: expiredByPeriod,
+      totalExpiredQuantity: quantitySum,
+      totalLoss: Math.round(totalLossAmount),
+      barData: dateLossData,
+      pieData: categoryLossData,
+      totalPieValue: categoryLossData.reduce((sum, item) => sum + item.value, 0),
+    };
+  }, [products, selectedMonthIndex, filterType, isBusiness]);
+
+  const maxLoss = barData.length > 0 ? Math.max(...barData.map(d => d.loss)) : 1;
 
   return (
     <LinearGradient
@@ -93,7 +249,7 @@ export default function LossDashboard() {
         <View style={styles.headerRow}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => router.push('/')}
+            onPress={() => router.push('/overview')}
           >
             <Ionicons name="chevron-back" size={26} color="#6366F1" />
           </TouchableOpacity>
@@ -120,7 +276,9 @@ export default function LossDashboard() {
             style={styles.monthPicker}
             onPress={() => setShowMonthPicker(!showMonthPicker)}
           >
-            <Text style={styles.monthText}>เดือน {selectedMonth}</Text>
+            <Text style={styles.monthText}>
+              {filterType === 'year' ? 'ในปีนี้' : `เดือน ${months[selectedMonthIndex]}`}
+            </Text>
             <Ionicons 
               name={showMonthPicker ? "chevron-up" : "chevron-down"} 
               size={16} 
@@ -132,16 +290,28 @@ export default function LossDashboard() {
         {/* Month Picker Dropdown */}
         {showMonthPicker && (
           <View style={styles.monthDropdown}>
-            {months.map((month) => (
+            <TouchableOpacity
+              style={[styles.monthOption, filterType === 'year' && styles.monthOptionActive]}
+              onPress={() => {
+                setFilterType('year');
+                setShowMonthPicker(false);
+              }}
+            >
+              <Text style={[styles.monthOptionText, filterType === 'year' && styles.monthOptionTextActive]}>
+                ในปีนี้
+              </Text>
+            </TouchableOpacity>
+            {months.map((month, index) => (
               <TouchableOpacity
                 key={month}
-                style={[styles.monthOption, selectedMonth === month && styles.monthOptionActive]}
+                style={[styles.monthOption, filterType === 'month' && selectedMonthIndex === index && styles.monthOptionActive]}
                 onPress={() => {
-                  setSelectedMonth(month);
+                  setFilterType('month');
+                  setSelectedMonthIndex(index);
                   setShowMonthPicker(false);
                 }}
               >
-                <Text style={[styles.monthOptionText, selectedMonth === month && styles.monthOptionTextActive]}>
+                <Text style={[styles.monthOptionText, filterType === 'month' && selectedMonthIndex === index && styles.monthOptionTextActive]}>
                   {month}
                 </Text>
               </TouchableOpacity>
@@ -160,9 +330,9 @@ export default function LossDashboard() {
               >
                 <View style={styles.summaryTopRow}>
                   <Ionicons name="cube-outline" size={22} color="#8B5CF6" />
-                  <Text style={styles.summaryLabel}>ของที่ทิ้งทั้งหมด</Text>
+                  <Text style={styles.summaryLabel}>ของที่หมดอายุทั้งหมด</Text>
                 </View>
-                <Text style={styles.summaryValue}>{summary.totalItems} <Text style={styles.summaryUnit}>รายการ</Text></Text>
+                <Text style={styles.summaryValue}>{totalExpiredQuantity} <Text style={styles.summaryUnit}>ชิ้น</Text></Text>
               </LinearGradient>
             </View>
             <View style={styles.summaryCard}>
@@ -174,10 +344,13 @@ export default function LossDashboard() {
                   <Ionicons name="wallet-outline" size={22} color="#EC4899" />
                   <Text style={styles.summaryLabel}>รวมมูลค่าความสูญเสีย</Text>
                 </View>
-                <Text style={styles.summaryValuePink}>{summary.totalLoss} <Text style={styles.summaryUnit}>บาท</Text></Text>
+                <Text style={styles.summaryValuePink}>{totalLoss} <Text style={styles.summaryUnit}>บาท</Text></Text>
               </LinearGradient>
             </View>
           </View>
+          {!isBusiness && (
+            <Text style={styles.infoText}>Dashboard นี้คำนวณเฉพาะ Business location</Text>
+          )}
         </View>
 
         {/* Bar Chart */}
@@ -188,6 +361,7 @@ export default function LossDashboard() {
               <Text style={styles.barChartLabel}>วันที่</Text>
               <Text style={styles.barChartLabel}>เงินที่เสีย (บาท)</Text>
             </View>
+            {barData.length === 0 && <Text style={styles.infoText}>ไม่มีข้อมูลหมดอายุในเดือนนี้</Text>}
             {barData.map((item, index) => (
               <View key={index} style={styles.barRow}>
                 <Text style={styles.barDateLabel}>{item.date}</Text>
@@ -207,13 +381,14 @@ export default function LossDashboard() {
 
         {/* Pie Chart Section */}
         <View style={styles.sectionLast}>
-          <Text style={styles.sectionTitle}>Top 5 วัตถุดิบที่หมดอายุ</Text>
+          <Text style={styles.sectionTitle}>Top 5 Category ที่หมดอายุ</Text>
           <View style={styles.chartCard}>
             <View style={styles.pieContainer}>
-              <PieChart />
+              <PieChart pieData={pieData} totalPieValue={totalPieValue} />
               
               {/* Legend */}
               <View style={styles.legendContainer}>
+                {pieData.length === 0 && <Text style={styles.infoText}>ไม่มีข้อมูลหมวดหมู่</Text>}
                 {pieData.map((item, index) => (
                   <View key={index} style={styles.legendItem}>
                     <Text style={styles.legendNumber}>{index + 1}.</Text>
@@ -228,7 +403,19 @@ export default function LossDashboard() {
             {/* View All Button */}
             <TouchableOpacity 
               style={styles.viewAllButton}
-              onPress={() => router.push('/showList')}
+              onPress={() =>
+                currentLocation?.id
+                  ? router.push({
+                    pathname: '/showList',
+                    params: { 
+                      locationId: currentLocation.id,
+                      businessOnly: '1',
+                      filterType: filterType,
+                      monthIndex: filterType === 'month' ? selectedMonthIndex.toString() : ''
+                    },
+                  })
+                  : null
+              }
             >
               <LinearGradient
                 colors={['#A78BFA', '#8B5CF6']}
@@ -541,5 +728,10 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 13,
     fontWeight: '600',
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 8,
   },
 });

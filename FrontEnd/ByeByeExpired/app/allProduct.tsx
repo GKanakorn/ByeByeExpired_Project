@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { getProducts } from "../src/api/product.api";
 import { supabase } from "../src/supabase";
+import { useLocation } from "../src/context/LocationContext";
 
 const TABS = [
   "All",
@@ -36,11 +37,32 @@ const CATEGORY_MAP: Record<string, string> = {
 
 export default function AllProductScreen() {
   const router = useRouter();
+  const { currentLocation } = useLocation();
   const [activeTab, setActiveTab] = useState("All");
 
   const [sortAsc, setSortAsc] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
-  const { locationId } = useLocalSearchParams()
+  const { locationId, context } = useLocalSearchParams()
+
+  const locationContext =
+    (typeof context === "string" ? context : currentLocation?.type) === "business"
+      ? "business"
+      : "personal";
+
+  const detailPath =
+    locationContext === "business" ? "/showDetailBusiness" : "/showDetailPersonal";
+
+  const openProductDetail = (productId: string) => {
+    if (!locationId || !productId) return;
+
+    router.push({
+      pathname: detailPath,
+      params: {
+        productId,
+        locationId: String(locationId),
+      },
+    });
+  };
 
   const parseDate = (dateStr: string): number => {
     return new Date(dateStr).getTime();
@@ -95,7 +117,7 @@ export default function AllProductScreen() {
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 16, paddingTop: 8 }}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => router.push('/overview')} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color="#2563EB" />
             <Text style={styles.backText}>Overview</Text>
           </TouchableOpacity>
@@ -151,7 +173,11 @@ export default function AllProductScreen() {
                 "https://via.placeholder.com/150";
 
               return (
-                <View style={styles.card}>
+                <TouchableOpacity
+                  style={styles.card}
+                  activeOpacity={0.85}
+                  onPress={() => openProductDetail(item.id)}
+                >
                   <Image
                     source={{ uri: imageUrl }}
                     style={styles.img}
@@ -163,7 +189,7 @@ export default function AllProductScreen() {
                   <Text style={styles.exp}>
                     EXP : {new Date(item.expiration_date).toDateString()}
                   </Text>
-                </View>
+                </TouchableOpacity>
               );
             }}
           />

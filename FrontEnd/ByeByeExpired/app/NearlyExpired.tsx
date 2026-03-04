@@ -13,8 +13,9 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { getNearlyExpiredProducts } from "../src/api/product.api";
+import { getOverview } from "../src/api/product.api";
 import { supabase } from "../src/supabase";
+import { useLocation } from "../src/context/LocationContext";
 
 const TABS = [
   "All",
@@ -35,9 +36,30 @@ const CATEGORY_MAP: Record<string, string> = {
 
 export default function NearlyExpiredScreen() {
   const router = useRouter();
+  const { currentLocation } = useLocation();
   const [activeTab, setActiveTab] = useState("All");
-  const { locationId } = useLocalSearchParams();
+  const { locationId, context } = useLocalSearchParams();
   const [products, setProducts] = useState<any[]>([]);
+
+  const locationContext =
+    (typeof context === "string" ? context : currentLocation?.type) === "business"
+      ? "business"
+      : "personal";
+
+  const detailPath =
+    locationContext === "business" ? "/showDetailBusiness" : "/showDetailPersonal";
+
+  const openProductDetail = (productId: string) => {
+    if (!locationId || !productId) return;
+
+    router.push({
+      pathname: detailPath,
+      params: {
+        productId,
+        locationId: String(locationId),
+      },
+    });
+  };
 
   const [sortAsc, setSortAsc] = useState(true);
   const parseDate = (dateStr: string): number => {
@@ -54,8 +76,8 @@ export default function NearlyExpiredScreen() {
 
           if (!session) return;
 
-          const data = await getNearlyExpiredProducts(locationId as string);
-          setProducts(data);
+          const overview = await getOverview(locationId as string);
+          setProducts(overview?.nearlyExpired || []);
         } catch (error) {
           console.log("Fetch nearly expired error:", error);
         }
@@ -91,7 +113,7 @@ export default function NearlyExpiredScreen() {
       <SafeAreaView style={{ flex: 1  ,paddingHorizontal: 16, paddingTop: 8}}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => router.push('/overview')} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color="#C98900" />
             <Text style={styles.backText}>Overview</Text>
           </TouchableOpacity>
@@ -147,7 +169,11 @@ export default function NearlyExpiredScreen() {
                 "https://via.placeholder.com/150";
 
               return (
-                <View style={styles.card}>
+                <TouchableOpacity
+                  style={styles.card}
+                  activeOpacity={0.85}
+                  onPress={() => openProductDetail(item.id)}
+                >
                   <Image source={{ uri: imageUrl }} style={styles.img} />
                   <Text style={styles.name}>
                     {item.product_templates?.name || item.name}
@@ -156,7 +182,7 @@ export default function NearlyExpiredScreen() {
                   <Text style={styles.exp}>
                     EXP : {new Date(item.expiration_date).toDateString()}
                   </Text>
-                </View>
+                </TouchableOpacity>
               );
             }}
           />

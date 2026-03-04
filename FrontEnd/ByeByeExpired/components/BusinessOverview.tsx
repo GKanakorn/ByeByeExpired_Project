@@ -44,6 +44,11 @@ export default function BusinessOverview({ location }: { location: Location }) {
   const canManageProduct = permissions.canManageProduct(role)
   const canManageStorage = permissions.canManageStorage(role)
 
+  const goToStorage = (storageId: string) => {
+    if (!storageId || !location?.id) return
+    router.push(`/storage?storageId=${encodeURIComponent(storageId)}&locationId=${encodeURIComponent(location.id)}&context=${encodeURIComponent(location.type)}`)
+  }
+
   const fetchAllData = async () => {
     try {
       setLoadingStorages(true)
@@ -191,11 +196,31 @@ export default function BusinessOverview({ location }: { location: Location }) {
 
           {/* ขวา */}
           <View style={styles.rightIcons}>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push("/Dashboard")}>
+            <TouchableOpacity
+              style={[styles.iconBtn, !canManageProduct && { opacity: 0.45 }]}
+              disabled={!canManageProduct}
+              onPress={() => {
+                if (!canManageProduct) {
+                  Alert.alert('Permission denied', 'You do not have permission to access this feature')
+                  return
+                }
+                router.push('/Dashboard')
+              }}
+            >
               <Ionicons name="pie-chart-outline" size={20} color="#FF6EC7" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push("/supplier")}>
+            <TouchableOpacity
+              style={[styles.iconBtn, !canManageProduct && { opacity: 0.45 }]}
+              disabled={!canManageProduct}
+              onPress={() => {
+                if (!canManageProduct) {
+                  Alert.alert('Permission denied', 'You do not have permission to access this feature')
+                  return
+                }
+                router.push('/supplier')
+              }}
+            >
               <Ionicons name="cube-outline" size={20} color="#FF6EC7" />
             </TouchableOpacity>
 
@@ -385,7 +410,8 @@ export default function BusinessOverview({ location }: { location: Location }) {
                 overshootRight={false}
                 rightThreshold={40}
               >
-                <View
+                <TouchableOpacity
+                  onPress={() => goToStorage(item.id)}
                   style={[
                     styles.storageItem,
                     {
@@ -423,11 +449,12 @@ export default function BusinessOverview({ location }: { location: Location }) {
                       {item.item_count ?? 0}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               </Swipeable>
             ) : (
-              <View
+              <TouchableOpacity
                 key={item.id}
+                onPress={() => goToStorage(item.id)}
                 style={[
                   styles.storageItem,
                   {
@@ -465,7 +492,7 @@ export default function BusinessOverview({ location }: { location: Location }) {
                     {item.item_count ?? 0}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
 

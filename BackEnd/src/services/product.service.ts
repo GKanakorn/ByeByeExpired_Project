@@ -135,7 +135,9 @@ export async function getOverview(userId: string, locationId: string) {
       location_id,
       owner_id,
       product_templates (
-        image_url
+        name,
+        image_url,
+        category
       )
     `)
     .eq('location_id', locationId)
@@ -176,6 +178,7 @@ export async function deleteProductQuantity(
   productId: string,
   quantityToDelete: number
 ) {
+  // location-role middleware already guarantees this user may edit the product
   const { data: product, error } = await supabaseAdmin
     .from('products')
     .select(`
@@ -190,7 +193,6 @@ export async function deleteProductQuantity(
       )
     `)
     .eq('id', productId)
-    .eq('owner_id', userId)
     .single()
 
   if (error || !product) {
@@ -228,7 +230,6 @@ export async function deleteProductQuantity(
       .from('products')
       .delete()
       .eq('id', productId)
-      .eq('owner_id', userId)
 
     return { deleted: true }
   }
@@ -240,7 +241,6 @@ export async function deleteProductQuantity(
       quantity: product.quantity - quantityToDelete,
     })
     .eq('id', productId)
-    .eq('owner_id', userId)
 
   return { deleted: false }
 }
@@ -336,6 +336,10 @@ export async function getProductById(
   low_stock_threshold,
   price,
   supplier_id,
+  suppliers (
+    id,
+    company_name
+  ),
   product_templates (
     id,
     name,
@@ -448,6 +452,7 @@ export async function updateProduct(
     lowStockThreshold,
   } = payload
 
+  // location-role middleware already guarantees this user may edit the product
   const { data, error } = await supabaseAdmin
     .from('products')
     .update({
@@ -466,7 +471,6 @@ export async function updateProduct(
       low_stock_threshold: lowStockThreshold ?? null,
     })
     .eq('id', productId)
-    .eq('owner_id', userId)
     .select()
     .single()
 
@@ -479,6 +483,7 @@ export async function deleteProduct(
   userId: string,
   productId: string
 ) {
+  // fetch product regardless of owner; authorization checked by middleware
   const { data: product, error } = await supabaseAdmin
     .from('products')
     .select(`
@@ -491,7 +496,6 @@ export async function deleteProduct(
       )
     `)
     .eq('id', productId)
-    .eq('owner_id', userId)
     .single()
 
   if (error || !product) {

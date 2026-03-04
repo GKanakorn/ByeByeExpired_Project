@@ -1,7 +1,7 @@
 // Login Screen - หน้าเข้าสู่ระบบ
 import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform, Image } from "react-native";
-import { login } from '../src/api/auth.api'
+import { login, verifyGoogleProfile } from '../src/api/auth.api'
 import { supabase } from '../src/supabase'
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser'
@@ -74,27 +74,51 @@ export default function LoginScreen() {
           return;
         }
 
-        // 🔥 set session ให้ Supabase
-        const { data, error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
+        const user_id = params.get('user')
+        console.log('[OAUTH] access_token:', access_token?.slice(0, 10) + '...')
+        console.log('[OAUTH] user_id:', user_id)
 
-        if (error) {
-          Alert.alert('Session Error', error.message);
-          return;
+        try {
+          // ✅ Step 1: Save token for backend API calls
+          await AsyncStorage.setItem('token', access_token)
+
+          // ✅ Step 2: Verify/Create profile for Google OAuth
+          await verifyGoogleProfile(access_token)
+          console.log('[GOOGLE] Profile verified/created successfully')
+
+          // ⏳ Step 3: Wait for database trigger to complete (locations creation)
+          // This gives the backend trigger time to create the 2 default locations
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          console.log('[GOOGLE] Waited for locations to be created')
+
+          // ✅ Step 4: NOW set session to trigger LocationContext reload
+          // This is AFTER profile and locations are created
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          })
+
+          if (sessionError) {
+            Alert.alert('Session Error', sessionError.message)
+            return
+          }
+
+          console.log('[GOOGLE] Session set and LocationContext reload triggered')
+
+        } catch (err: any) {
+          console.warn('[GOOGLE] Warning during profile verification:', err.message)
+          // Still try to redirect even if there's a warning
+          try {
+            await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            })
+          } catch (e) {
+            console.error('Failed to set session:', e)
+          }
         }
 
-        const user = data.user;
-
-        if (!user) {
-          Alert.alert('Error', 'ไม่พบ user หลัง set session');
-          return;
-        }
-
-        console.log('[LOGIN SUCCESS] UID:', user.id);
-
-        router.replace('/overview');
+        router.replace('/overview')
       }
     }
   };

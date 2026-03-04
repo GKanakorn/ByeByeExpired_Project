@@ -57,9 +57,12 @@ router.post(
       const { locationId } = req.params;
       const { email, role } = req.body;
       await inviteMemberService(locationId, email, role);
-      res.status(201).json({ message: "Member invited" });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to invite member" });
+      res.status(201).json({ message: "Member added successfully" });
+    } catch (error: any) {
+      console.error('ADD member error:', error)
+      res.status(500).json({
+        message: error?.message || "Failed to add member",
+      });
     }
   }
 );

@@ -237,15 +237,55 @@ router.get(
     try {
       const userId = req.user!.id
 
-      const { data, error } = await supabaseAdmin
+      // 1️⃣ Get locations owned by user
+      const { data: ownedLocations } = await supabaseAdmin
+        .from('locations')
+        .select('id')
+        .eq('owner_id', userId)
+
+      // 2️⃣ Get locations where user is a member
+      const { data: memberLocations } = await supabaseAdmin
+        .from('location_members')
+        .select('location_id')
+        .eq('user_id', userId)
+
+      // 3️⃣ Combine all accessible location IDs
+      const accessibleLocationIds = [
+        ...(ownedLocations?.map((l) => l.id) || []),
+        ...(memberLocations?.map((m) => m.location_id) || []),
+      ]
+
+      // 4️⃣ Get deleted history from all accessible locations
+      const { data: historyData, error } = await supabaseAdmin
         .from('product_delete_history')
         .select('*')
-        .eq('deleted_by', userId)
+        .in('location_id', accessibleLocationIds)
         .order('deleted_at', { ascending: false })
 
       if (error) throw error
 
-      res.json(data)
+      if (!historyData || historyData.length === 0) {
+        return res.json([])
+      }
+
+      // 5️⃣ Get unique user IDs who deleted products
+      const deleterIds = [...new Set(historyData.map(h => h.deleted_by))]
+
+      // 6️⃣ Fetch profiles for all deleters
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', deleterIds)
+
+      // 7️⃣ Map profiles to history items
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
+      
+      const enrichedData = historyData.map(item => ({
+        ...item,
+        deleted_by_profile: profileMap.get(item.deleted_by) || null
+      }))
+
+      res.json(enrichedData)
     } catch (err: any) {
       res.status(500).json({
         message: err.message || 'Fetch history failed',

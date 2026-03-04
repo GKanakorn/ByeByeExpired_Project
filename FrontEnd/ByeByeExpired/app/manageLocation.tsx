@@ -138,7 +138,19 @@ export default function ManageLocationScreen() {
             const token = session?.session?.access_token;
             if (!token) return;
 
-            await inviteMemberToLocation(token, locationId, inviteEmail, inviteRole);
+            const { data: userData } = await supabase.auth.getUser();
+            const invitedByName =
+                userData.user?.user_metadata?.full_name ||
+                userData.user?.email ||
+                "Owner";
+
+            await inviteMemberToLocation(
+                token,
+                locationId,
+                inviteEmail,
+                inviteRole,
+                invitedByName
+            );
 
             setInviteVisible(false);
             setInviteEmail("");

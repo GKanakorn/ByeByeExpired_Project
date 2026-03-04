@@ -13,10 +13,11 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useEffect } from 'react';
-import { getSuppliers } from '../src/api/supplier.api'
+import { getSuppliers, getSuppliersByLocation } from '../src/api/supplier.api'
 import { useFocusEffect } from '@react-navigation/native'
 import { useCallback } from 'react'
 import { supabase } from '@/src/supabase';
+import { useLocation } from '@/src/context/LocationContext';
 
 //Define the Supplier
 interface Supplier {
@@ -31,6 +32,7 @@ const SUPPLIERT_IMAGE = require('../assets/images/SupplierT.png');
 
 export default function SupplierScreen() {
   const router = useRouter();
+  const { currentLocation } = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -46,7 +48,12 @@ export default function SupplierScreen() {
       } = await supabase.auth.getSession()
 
       if (!session) return
-      const data = await getSuppliers(session.access_token)
+      const data = currentLocation?.id
+        ? await getSuppliersByLocation(
+          session.access_token,
+          currentLocation.id
+        )
+        : await getSuppliers(session.access_token)
 
       const formatted = data.map((item: any) => ({
         id: item.id,
@@ -63,7 +70,12 @@ export default function SupplierScreen() {
   const renderSupplierItem = ({ item }: { item: Supplier }) => (
     <TouchableOpacity
       style={styles.supplierCard}
-      onPress={() => router.push(`/detailSupplier?id=${item.id}`)}
+      onPress={() =>
+        router.push({
+          pathname: '/detailSupplier',
+          params: { id: item.id, locationId: currentLocation?.id ?? '' },
+        })
+      }
     >
       <Image
         source={
@@ -88,7 +100,7 @@ export default function SupplierScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchSuppliers()
-    }, [])
+    }, [currentLocation?.id])
   )
   return (
     <View style={styles.container}>
@@ -102,7 +114,14 @@ export default function SupplierScreen() {
             <Ionicons name="chevron-back" size={28} color="#7C3AED" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Supplier Tracking</Text>
-          <TouchableOpacity onPress={() => router.push('/addSupplier')}>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: '/addSupplier',
+                params: { locationId: currentLocation?.id ?? '' },
+              })
+            }
+          >
             <MaterialIcons name="add" size={28} color="#7C3AED" />
           </TouchableOpacity>
         </View>
