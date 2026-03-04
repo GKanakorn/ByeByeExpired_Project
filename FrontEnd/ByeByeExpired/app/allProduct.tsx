@@ -94,7 +94,7 @@ export default function AllProductScreen() {
       ? products
       : products.filter((item: any) => {
           const categoryValue =
-            item.product_templates?.category || item.category;
+            item.category || item.product_templates?.category;
           return categoryValue === CATEGORY_MAP[activeTab];
         });
 
@@ -183,7 +183,7 @@ export default function AllProductScreen() {
                     style={styles.img}
                   />
                   <Text style={styles.name}>
-                    {item.product_templates?.name || item.name}
+                    {item.name || item.product_templates?.name}
                   </Text>
                   <Text style={styles.qty}>Qty: {item.quantity}</Text>
                   <Text style={styles.exp}>

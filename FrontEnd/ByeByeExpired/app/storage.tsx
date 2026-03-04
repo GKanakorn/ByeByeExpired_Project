@@ -28,6 +28,14 @@ const TABS = [
   "Beverages",
 ];
 
+const CATEGORY_MAP: Record<string, string> = {
+  "Vegetables & Fruits": "veg",
+  "Meat & Poultry": "meat",
+  "Egg & Dairy": "egg",
+  "Processed Foods": "processed",
+  "Beverages": "drink",
+};
+
 const FONT_FAMILY = "System";
 const FONT_WEIGHT_REGULAR = "500" as const;
 const FONT_WEIGHT_SEMIBOLD = "600" as const;
@@ -147,7 +155,7 @@ export default function StorageScreen() {
       ? sortedProducts
       : sortedProducts.filter(
           (p) =>
-            (p.product_templates?.category || p.category) === activeTab
+            (p.category || p.product_templates?.category) === CATEGORY_MAP[activeTab]
         );
 
   // Generate lighter shade of storage color สำหรับ gradient
@@ -247,14 +255,9 @@ export default function StorageScreen() {
                   <Text style={styles.emptyText}>ไม่มีสินค้าในที่เก็บนี้</Text>
                 }
                 renderItem={({ item }) => {
-                  const productName = item.product_templates?.name || item.name || "-";
-                  const productImage = item.product_templates?.image_url || item.img || "";
-                  const expDate = new Date(item.expiration_date);
-                  const expStr = expDate.toLocaleDateString("th-TH", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  });
+                  const imageUrl =
+                    item.product_templates?.image_url ||
+                    "https://via.placeholder.com/150";
 
                   return (
                     <TouchableOpacity
@@ -262,28 +265,17 @@ export default function StorageScreen() {
                       activeOpacity={0.85}
                       onPress={() => openProductDetail(item.id)}
                     >
-                      <View style={styles.imageContainer}>
-                        {productImage ? (
-                          <Image
-                            source={{ uri: productImage }}
-                            style={styles.img}
-                          />
-                        ) : (
-                          <View
-                            style={[
-                              styles.img,
-                              { backgroundColor: "#f0f0f0", justifyContent: "center", alignItems: "center" },
-                            ]}
-                          >
-                            <Ionicons name="image-outline" size={32} color="#ccc" />
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.name} numberOfLines={2}>
-                        {productName}
+                      <Image
+                        source={{ uri: imageUrl }}
+                        style={styles.img}
+                      />
+                      <Text style={styles.name}>
+                        {item.name || item.product_templates?.name}
                       </Text>
-                      <Text style={styles.qty}>จำนวน : {item.quantity} ชิ้น</Text>
-                      <Text style={styles.exp}>EXP : {expStr}</Text>
+                      <Text style={styles.qty}>Qty: {item.quantity}</Text>
+                      <Text style={styles.exp}>
+                        EXP : {new Date(item.expiration_date).toDateString()}
+                      </Text>
                     </TouchableOpacity>
                   );
                 }}

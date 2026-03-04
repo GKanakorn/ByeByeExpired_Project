@@ -36,22 +36,30 @@ export async function getProfileStats(userId: string) {
   if (error) throw error
 
   const today = new Date()
-  const threeDaysLater = new Date()
-  threeDaysLater.setDate(today.getDate() + 3)
+  today.setHours(0, 0, 0, 0)
 
-  let total = data.length
   let near = 0
   let expired = 0
 
-  data.forEach((item: any) => {
-    const exp = new Date(item.expiration_date)
+  ;(data || []).forEach((item: any) => {
+    if (!item.expiration_date) return
 
-    if (exp < today) expired++
-    else if (exp >= today && exp <= threeDaysLater) near++
+    const exp = new Date(item.expiration_date)
+    exp.setHours(0, 0, 0, 0)
+
+    const diff = Math.floor(
+      (exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    if (diff < 0) {
+      expired++
+    } else if (diff <= 7) {
+      near++
+    }
   })
 
   return {
-    total,
+    total: data.length,
     near,
     expired,
   }

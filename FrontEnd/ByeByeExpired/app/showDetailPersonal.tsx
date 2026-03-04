@@ -945,6 +945,16 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     paddingHorizontal: 15,
   },
+  name: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  detail: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
   exp: {
     color: 'red',
     fontSize: 12,

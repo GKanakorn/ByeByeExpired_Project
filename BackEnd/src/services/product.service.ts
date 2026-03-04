@@ -131,6 +131,8 @@ export async function getOverview(userId: string, locationId: string) {
     .from('products')
     .select(`
       id,
+      name,
+      category,
       expiration_date,
       location_id,
       owner_id,
@@ -255,7 +257,8 @@ export async function getProductsByLocation(
       *,
       product_templates (
         name,
-        image_url
+        image_url,
+        category
       )
     `)
     .eq('location_id', locationId)
@@ -297,6 +300,8 @@ export async function searchProducts(
     .from('products')
     .select(`
       id,
+      name,
+      category,
       quantity,
       expiration_date,
       storage_id,
@@ -305,7 +310,8 @@ export async function searchProducts(
         id,
         name,
         image_url,
-        barcode
+        barcode,
+        category
       )
     `)
     .eq('location_id', locationId)
@@ -368,6 +374,7 @@ export async function getExpiredProducts(
     .select(`
       *,
       product_templates (
+        id,
         name,
         image_url,
         category

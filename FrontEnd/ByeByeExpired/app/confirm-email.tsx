@@ -16,19 +16,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export default function ConfirmEmailScreen() {
   const { email } = useLocalSearchParams<{ email: string }>()
+  const normalizedEmail = typeof email === 'string'
+    ? email.trim().toLowerCase()
+    : ''
 
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [resending, setResending] = useState(false)
 
   const inputs = useRef<(TextInput | null)[]>([])
 
   useEffect(() => {
-    if (!email) {
+    if (!normalizedEmail) {
       Alert.alert('Error', 'ไม่พบอีเมลจากการสมัคร')
       router.replace('/Register')
     }
-  }, [])
+  }, [normalizedEmail])
 
   useEffect(() => {
     if (otp.every((d) => d !== '')) {
@@ -86,11 +90,11 @@ export default function ConfirmEmailScreen() {
   }
 
   const handleVerify = async (code: string) => {
-    if (!email || code.length !== 6) return
+    if (!normalizedEmail || code.length !== 6) return
 
     setLoading(true)
     const { error, data } = await supabase.auth.verifyOtp({
-      email,
+      email: normalizedEmail,
       token: code,
       type: 'signup',
     })
@@ -111,10 +115,10 @@ export default function ConfirmEmailScreen() {
       console.log('[OTP VERIFIED] UID:', user.id)
 
       // ✅ Call backend to create profile + locations
-      const fullName = user.user_metadata?.full_name || email.split('@')[0]
+      const fullName = user.user_metadata?.full_name || normalizedEmail.split('@')[0]
       await confirmAndCreateProfile({
         userId: user.id,
-        email: user.email || email,
+        email: user.email || normalizedEmail,
         fullName,
       })
 
@@ -143,23 +147,39 @@ export default function ConfirmEmailScreen() {
   }
 
   const handleResend = async () => {
-    if (cooldown > 0 || !email) return
+    if (cooldown > 0 || !normalizedEmail || resending) return
 
-    await supabase.auth.resend({
-      type: 'signup',
-      email,
-    })
+    try {
+      setResending(true)
 
-    setCooldown(30)
-    const timer = setInterval(() => {
-      setCooldown((c) => {
-        if (c <= 1) {
-          clearInterval(timer)
-          return 0
-        }
-        return c - 1
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: normalizedEmail,
+        options: {
+          emailRedirectTo: 'byebyeexpired://login-callback',
+        },
       })
-    }, 1000)
+
+      if (error) {
+        throw error
+      }
+
+      Alert.alert('สำเร็จ', 'ส่ง OTP ใหม่แล้ว กรุณาตรวจอีเมล')
+      setCooldown(30)
+      const timer = setInterval(() => {
+        setCooldown((c) => {
+          if (c <= 1) {
+            clearInterval(timer)
+            return 0
+          }
+          return c - 1
+        })
+      }, 1000)
+    } catch (err: any) {
+      Alert.alert('ส่ง OTP ไม่สำเร็จ', err?.message || 'กรุณาลองใหม่อีกครั้ง')
+    } finally {
+      setResending(false)
+    }
   }
 
   return (
@@ -168,7 +188,7 @@ export default function ConfirmEmailScreen() {
         <Text style={styles.title}>ยืนยันอีเมล</Text>
 
         <Text style={styles.emailText}>
-            ส่งรหัสไปที่ {email && maskEmail(email)}
+          ส่งรหัสไปที่ {normalizedEmail && maskEmail(normalizedEmail)}
         </Text>
 
         <View style={styles.otpRow}>
@@ -200,9 +220,9 @@ export default function ConfirmEmailScreen() {
             </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity disabled={cooldown > 0} onPress={handleResend}>
+        <TouchableOpacity disabled={cooldown > 0 || resending} onPress={handleResend}>
             <Text style={styles.resendText}>
-            {cooldown > 0 ? `ส่งใหม่ใน ${cooldown}s` : 'ส่ง OTP อีกครั้ง'}
+          {resending ? 'กำลังส่ง...' : cooldown > 0 ? `ส่งใหม่ใน ${cooldown}s` : 'ส่ง OTP อีกครั้ง'}
             </Text>
         </TouchableOpacity>
         </View>

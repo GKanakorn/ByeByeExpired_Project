@@ -47,6 +47,25 @@ router.get('/overview/:locationId', requireAuth, async (req: AuthRequest, res: R
   }
 })
 
+router.get('/expired', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id
+    const locationId = req.query.locationId as string
+
+    if (!locationId) {
+      return res.status(400).json({ message: 'locationId is required' })
+    }
+
+    const result = await getOverview(userId, locationId)
+    res.json(result.expired || [])
+  } catch (err: any) {
+    console.error('🔥 GET EXPIRED ERROR:', err)
+    res.status(500).json({
+      message: err.message || 'Get expired products failed',
+    })
+  }
+})
+
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id

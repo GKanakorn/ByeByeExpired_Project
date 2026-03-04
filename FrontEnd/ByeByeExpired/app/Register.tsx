@@ -3,9 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, A
 import { supabase } from '../src/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
-import { register } from '../src/api/auth.api'
+import { register, verifyGoogleProfile } from '../src/api/auth.api'
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -97,25 +98,43 @@ const RegisterScreen = () => {
           return;
         }
 
-        // 🔥 set session ให้ Supabase
-        const { data, error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
+        try {
+          // ✅ Step 1: Save token for backend API calls
+          await AsyncStorage.setItem('token', access_token)
 
-        if (error) {
-          Alert.alert('Session Error', error.message);
-          return;
+          // ✅ Step 2: Verify/Create profile for Google OAuth
+          await verifyGoogleProfile(access_token)
+          console.log('[GOOGLE] Profile verified/created successfully')
+
+          // ⏳ Step 3: Wait for database trigger to complete (locations creation)
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          console.log('[GOOGLE] Waited for locations to be created')
+
+          // ✅ Step 4: NOW set session to trigger LocationContext reload
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          })
+
+          if (sessionError) {
+            Alert.alert('Session Error', sessionError.message)
+            return
+          }
+
+          console.log('[GOOGLE] Session set and LocationContext reload triggered')
+
+        } catch (err: any) {
+          console.warn('[GOOGLE] Warning during profile verification:', err.message)
+          // Still try to redirect even if there's a warning
+          try {
+            await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            })
+          } catch (e) {
+            console.error('Failed to set session:', e)
+          }
         }
-
-        const user = data.user;
-
-        if (!user) {
-          Alert.alert('Error', 'ไม่พบ user หลัง set session');
-          return;
-        }
-
-        console.log('[LOGIN SUCCESS] UID:', user.id);
 
         router.replace('/overview');
       }
