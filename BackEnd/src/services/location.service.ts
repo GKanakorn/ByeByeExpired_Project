@@ -1,5 +1,11 @@
 import { supabaseAdmin } from '../supabase'
 
+const DEFAULT_STORAGES_FOR_NEW_LOCATION = [
+  { name: 'Freezer', icon: 'freezer', color: '#3498DB' },
+  { name: 'Fridge', icon: 'fridge', color: '#FFB6C1' },
+  { name: 'Dry food', icon: 'pantry', color: '#E67E22' },
+]
+
 export async function createLocation(userId: string, data: {
   name: string
   type: string
@@ -14,14 +20,30 @@ export async function createLocation(userId: string, data: {
     .select()
     .single()
 
-  await supabaseAdmin
+  if (error || !location) throw error ?? new Error('Failed to create location')
+
+  const { error: memberError } = await supabaseAdmin
     .from('location_members')
     .insert({
       user_id: userId,
       location_id: location.id,
       role: 'owner',
     })
-  if (error) throw error
+
+  if (memberError) throw memberError
+
+  const storagePayload = DEFAULT_STORAGES_FOR_NEW_LOCATION.map(storage => ({
+    name: storage.name,
+    icon: storage.icon,
+    color: storage.color,
+    location_id: location.id,
+  }))
+
+  const { error: storageError } = await supabaseAdmin
+    .from('storages')
+    .insert(storagePayload)
+
+  if (storageError) throw storageError
 
   return location
 }

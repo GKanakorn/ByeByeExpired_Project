@@ -16,10 +16,25 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
   const [locations, setLocations] = useState<Location[]>([])
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null)
 
+  const pickDefaultLocation = (data: Location[]) => {
+    const myHome = data.find(loc => loc.name === 'My Home')
+    if (myHome) return myHome
+
+    const personal = data.find(loc => loc.type === 'personal')
+    if (personal) return personal
+
+    return data[0]
+  }
+
   const reloadLocations = async () => {
-    const { data: session } = await supabase.auth.getSession()
-    const token = session?.session?.access_token
-    if (!token) return
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+
+    if (!token) {
+      setLocations([])
+      setCurrentLocation(null)
+      return
+    }
 
     const data = await getMyLocations(token)
 
@@ -33,16 +48,29 @@ export const LocationProvider = ({ children }: { children: React.ReactNode }) =>
     // ✅ ผู้ใช้เก่า
     setLocations(data)
 
-    // ⭐ หัวใจของ default
-    setCurrentLocation(prev => prev ?? data[0])
+    // ⭐ ตั้ง default location ให้ deterministic
+    setCurrentLocation(prev => {
+      if (prev && data.some(loc => loc.id === prev.id)) {
+        return prev
+      }
+      return pickDefaultLocation(data)
+    })
   }
+
+  useEffect(() => {
+    reloadLocations()
+  }, [])
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session?.access_token) {
           reloadLocations()
+          return
         }
+
+        setLocations([])
+        setCurrentLocation(null)
       }
     )
 

@@ -1,6 +1,64 @@
 // BackEnd/src/services/auth.service.ts
 import { supabaseAnon, supabaseAdmin } from '../supabase'
 
+const DEFAULT_LOCATION_CONFIGS = [
+  { name: 'My Home', type: 'personal' as const },
+  { name: 'Restaurants', type: 'business' as const },
+]
+
+const DEFAULT_STORAGE_CONFIGS = [
+  { name: 'Freezer', icon: 'freezer', color: '#3498DB' },
+  { name: 'Fridge', icon: 'fridge', color: '#FFB6C1' },
+  { name: 'Dry food', icon: 'pantry', color: '#E67E22' },
+]
+
+async function createDefaultLocationsAndStorages(userId: string) {
+  for (const locationConfig of DEFAULT_LOCATION_CONFIGS) {
+    const { data: location, error: locationError } = await supabaseAdmin
+      .from('locations')
+      .insert({
+        name: locationConfig.name,
+        type: locationConfig.type,
+        owner_id: userId,
+      })
+      .select()
+      .single()
+
+    if (locationError || !location) {
+      throw new Error('Failed to create default location: ' + locationError?.message)
+    }
+
+    const { error: memberError } = await supabaseAdmin
+      .from('location_members')
+      .insert({
+        user_id: userId,
+        location_id: location.id,
+        role: 'owner',
+      })
+
+    if (memberError) {
+      throw new Error('Failed to add location member: ' + memberError.message)
+    }
+
+    const storagesPayload = DEFAULT_STORAGE_CONFIGS.map(storage => ({
+      name: storage.name,
+      icon: storage.icon,
+      color: storage.color,
+      location_id: location.id,
+    }))
+
+    const { error: storagesError } = await supabaseAdmin
+      .from('storages')
+      .insert(storagesPayload)
+
+    if (storagesError) {
+      throw new Error(
+        `Failed to create default storages for ${locationConfig.name}: ${storagesError.message}`
+      )
+    }
+  }
+}
+
 // ✅ Manual Registration with OTP
 export async function register({
   email,
@@ -48,7 +106,7 @@ export async function confirmAndCreateProfile(
       return { success: true, profileExists: true }
     }
 
-    // Insert profile - trigger will create locations automatically
+    // 1. Insert profile
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -62,6 +120,8 @@ export async function confirmAndCreateProfile(
     if (profileError) {
       throw new Error('Failed to create profile: ' + profileError.message)
     }
+
+    await createDefaultLocationsAndStorages(userId)
 
     return { success: true, profileExists: false }
   } catch (error: any) {
@@ -90,7 +150,7 @@ export async function verifyOrCreateProfileGoogle(
       return { success: true, profileExists: true }
     }
 
-    // Insert profile with Google provider
+    // 1. Insert profile with Google provider
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -104,6 +164,8 @@ export async function verifyOrCreateProfileGoogle(
     if (profileError) {
       throw new Error('Failed to create Google profile: ' + profileError.message)
     }
+
+    await createDefaultLocationsAndStorages(userId)
 
     return { success: true, profileExists: false }
   } catch (error: any) {
