@@ -8,6 +8,7 @@ import {
   Modal,
   Image,
   Pressable,
+  TextInput,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,6 +25,8 @@ export default function DeleteProduct() {
   const [confirmModal, setConfirmModal] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+
+  const [searchName, setSearchName] = useState('');
 
   const { barcode, locationId, context } = useLocalSearchParams<{
     barcode?: string
@@ -98,6 +101,13 @@ export default function DeleteProduct() {
     context,
   })
 
+  // Filter products based on search
+  const filteredProducts = products.filter((item) => {
+    if (!searchName.trim()) return true;
+    const productName = item.product_templates?.name || item.name || '';
+    return productName.toLowerCase().includes(searchName.toLowerCase());
+  });
+
   const handleDelete = async () => {
   if (!selectedProduct) return;
 
@@ -153,7 +163,7 @@ export default function DeleteProduct() {
     >
       {/* ===== MAIN PAGE ===== */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.push('/overview')}>
           <Ionicons name="chevron-back" size={34} color="#434bdfff" />
         </TouchableOpacity>
         <Text style={styles.title}>DeleteProduct</Text>
@@ -161,7 +171,26 @@ export default function DeleteProduct() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ===== PRODUCT LIST (All Lots) ===== */}
+        {/* ===== SEARCH BAR ===== */}
+        <View style={styles.searchSection}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search" size={18} color="#999" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="ค้นหาสินค้า..."
+              value={searchName}
+              onChangeText={setSearchName}
+              placeholderTextColor="#999"
+            />
+            {searchName.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchName('')}>
+                <Ionicons name="close-circle" size={18} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* ===== PRODUCT LIST (Filtered) ===== */}
         <View style={{ marginTop: 20, flex: 1 }}>
           {loading && (
             <Text style={{ textAlign: "center", color: "#666" }}>
@@ -169,14 +198,14 @@ export default function DeleteProduct() {
             </Text>
           )}
 
-          {!loading && products.length === 0 && (
+          {!loading && filteredProducts.length === 0 && (
             <Text style={{ textAlign: "center", color: "#666" }}>
-              No product found
+              {searchName ? 'ไม่พบสินค้าที่ค้นหา' : 'No product found'}
             </Text>
           )}
 
           {!loading &&
-            products.map((item) => (
+            filteredProducts.map((item) => (
               <View key={item.id} style={styles.card}>
                 <Image
                   source={{
@@ -516,5 +545,28 @@ const styles = StyleSheet.create({
     backgroundColor: "#f4f6ff",
     justifyContent: "center",
     alignItems: "center",
+  },
+  searchSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    marginBottom: 10,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    height: 45,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
   },
 });

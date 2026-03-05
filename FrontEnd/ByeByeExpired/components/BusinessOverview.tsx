@@ -243,28 +243,31 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
         </View>
 
         {/* Search */}
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={16} color="#aaa" />
-          <TextInput
-            placeholder="Search Product"
-            style={styles.searchInput}
-            value={searchText}
-            onChangeText={(text) => {
-              setSearchText(text)
-              handleSearch(text)
-            }}
-          />
-
-          {searchText.length > 0 && (
-            <TouchableOpacity
-              onPress={() => {
-                setSearchText("")
-                setSearchResults([])
+        <View style={styles.searchSection}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search" size={18} color="#999" style={styles.searchIcon} />
+            <TextInput
+              placeholder="Search Product"
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={(text) => {
+                setSearchText(text)
+                handleSearch(text)
               }}
-            >
-              <Ionicons name="close-circle" size={18} color="#aaa" />
-            </TouchableOpacity>
-          )}
+              placeholderTextColor="#999"
+            />
+
+            {searchText.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchText("")
+                  setSearchResults([])
+                }}
+              >
+                <Ionicons name="close-circle" size={18} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Nearly expired */}
@@ -531,9 +534,9 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
 
           <View style={styles.searchDropdown}>
             {isSearching ? (
-              <Text style={{ color: "#999" }}>Searching...</Text>
+              <Text style={styles.searchResultText}>Searching...</Text>
             ) : searchResults.length === 0 ? (
-              <Text style={{ color: "#999" }}>No product found</Text>
+              <Text style={styles.searchResultText}>No product found</Text>
             ) : (
               searchResults.map((item) => (
                 <TouchableOpacity
@@ -551,7 +554,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
                     })
                   }}
                 >
-                  <Text style={{ fontWeight: "500" }}>
+                  <Text style={styles.searchResultText}>
                     {item.product_templates?.name}
                   </Text>
                 </TouchableOpacity>
@@ -788,18 +791,27 @@ const styles = StyleSheet.create({
   },
 
   /* Search */
-  searchBox: {
-    flexDirection: "row",
-    backgroundColor: "#EEE",
-    padding: 10,
-    borderRadius: 20,
-    marginVertical: 12,
-    alignItems: "center",
-    marginBottom: 2,
+  searchSection: {
+    paddingVertical: 8,
+    marginBottom: 6,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    height: 45,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
-    marginLeft: 8,
     flex: 1,
+    fontSize: 14,
+    color: '#333',
   },
 
   /* Section */
@@ -1077,7 +1089,13 @@ const styles = StyleSheet.create({
 
   searchResultItem: {
     paddingVertical: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 0.5,
     borderBottomColor: "#eee",
+  },
+  searchResultText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
   },
 });

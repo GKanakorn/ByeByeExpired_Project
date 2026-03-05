@@ -137,6 +137,34 @@ export async function searchProducts(
   return res.json()
 }
 
+/* ===============================
+   3️⃣ b search product templates
+================================ */
+export async function searchProductTemplates(keyword: string) {
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+
+  if (!token) {
+    throw new Error('Not authenticated')
+  }
+
+  const res = await fetch(
+    `${API_URL}/products/search-templates?q=${encodeURIComponent(keyword)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Search templates failed')
+  }
+
+  return res.json()
+}
+
 // Get all products, optionally by locationId
 export async function getProducts(locationId: string) {
   const { data } = await supabase.auth.getSession()

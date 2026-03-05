@@ -9,6 +9,7 @@ import {
   getProductsByLocation,
   getProductsByBarcode,
   searchProducts,
+  searchProductTemplates,
   getProductById,
   updateProduct,
   deleteProduct,
@@ -113,6 +114,25 @@ router.get('/search', requireAuth, async (req: AuthRequest, res: Response) => {
     console.error('🔥 SEARCH PRODUCTS ERROR:', err)
     res.status(500).json({
       message: err.message || 'Search products failed',
+    })
+  }
+})
+
+router.get('/search-templates', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { q } = req.query
+
+    if (typeof q !== 'string' || q.trim() === '') {
+      return res.status(400).json({ message: 'Search keyword (q) is required' })
+    }
+
+    const result = await searchProductTemplates(q)
+
+    res.json(result)
+  } catch (err: any) {
+    console.error('🔥 SEARCH TEMPLATES ERROR:', err)
+    res.status(500).json({
+      message: err.message || 'Search templates failed',
     })
   }
 })

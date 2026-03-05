@@ -8,9 +8,11 @@ import {
   Switch,
   Modal,
   Platform,
-  Alert
+  Alert,
+  FlatList,
+  ActivityIndicator
 } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import React from 'react'
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -18,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router'
-import { createProduct } from '../src/api/product.api';
+import { createProduct, searchProducts, searchProductTemplates } from '../src/api/product.api';
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'react-native'
 import { getStoragesByLocation } from '../src/api/storage.api'
@@ -59,6 +61,10 @@ export default function AddProductScreen() {
     : null
 
   const [name, setName] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [image, setImage] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [category, setCategory] = useState('');
@@ -164,6 +170,97 @@ export default function AddProductScreen() {
       fetchStorages()
     }, [locationId])
   )
+
+  // 🔍 Handle product name search with debouncing
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    if (name.trim().length === 0) {
+      setSearchResults([])
+      setShowSearchResults(false)
+      return
+    }
+
+    setIsSearching(true)
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (!locationId) return
+
+        // 1️⃣ Search in user's products first
+        const userProducts = await searchProducts(
+          locationId as string,
+          name
+        )
+
+        if (userProducts && userProducts.length > 0) {
+          setSearchResults(userProducts)
+          setShowSearchResults(true)
+          setIsSearching(false)
+          return
+        }
+
+        // 2️⃣ If no user products found, search in templates
+        const templates = await searchProductTemplates(name)
+
+        if (templates && templates.length > 0) {
+          const templateResults = templates.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            category: t.category,
+            image_url: t.image_url,
+            fromTemplate: true,
+            product_templates: {
+              name: t.name,
+              category: t.category,
+              image_url: t.image_url,
+            }
+          }))
+          setSearchResults(templateResults)
+          setShowSearchResults(true)
+        } else {
+          setSearchResults([])
+          setShowSearchResults(false)
+        }
+      } catch (err) {
+        console.log('Search error:', err)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 500) // 500ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [name, locationId])
+
+  const handleSelectProduct = (product: any) => {
+    // 1️⃣ Set name from selection
+    setName(product.name)
+
+    // 2️⃣ Set category from product or template
+    const productCategory = product.category ||
+      product.product_templates?.category ||
+      ''
+    setCategory(productCategory)
+
+    // 3️⃣ Set image from product or template
+    const productImage = product.image_url ||
+      product.product_templates?.image_url ||
+      null
+    if (productImage) {
+      setImage(productImage)
+    }
+
+    // 4️⃣ Close search results
+    setShowSearchResults(false)
+  }
+
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
     router.replace('/overview')
@@ -406,11 +503,64 @@ export default function AddProductScreen() {
 
         <View style={styles.card}>
           <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
+          <View style={styles.searchInputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter product name or search existing"
+            />
+            {isSearching && (
+              <ActivityIndicator
+                style={styles.searchLoader}
+                size="small"
+                color="#5B5FC7"
+              />
+            )}
+          </View>
+
+          {/* Search Results Below Input */}
+          {showSearchResults && (
+            <View style={styles.searchResultsDropdown}>
+              {searchResults.length > 0 ? (
+                <FlatList
+                  data={searchResults}
+                  keyExtractor={(item, index) => `${item.id}-${index}`}
+                  scrollEnabled={false}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.searchResultItem}
+                      onPress={() => handleSelectProduct(item)}
+                    >
+                      <View style={styles.searchResultContent}>
+                        {item.image_url || item.product_templates?.image_url ? (
+                          <Image
+                            source={{ uri: item.image_url || item.product_templates?.image_url }}
+                            style={styles.searchResultImage}
+                          />
+                        ) : (
+                          <View style={[styles.searchResultImage, { backgroundColor: '#f0f0f0' }]} />
+                        )}
+                        <View style={styles.searchResultText}>
+                          <Text style={styles.searchResultName} numberOfLines={1}>
+                            {item.name}
+                          </Text>
+                          <Text style={styles.searchResultCategory} numberOfLines={1}>
+                            {item.category || item.product_templates?.category || 'No category'}
+                          </Text>
+                          {item.fromTemplate && (
+                            <Text style={styles.searchResultBadge}>From Template</Text>
+                          )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              ) : (
+                <Text style={styles.noResultsText}>No products found</Text>
+              )}
+            </View>
+          )}
 
           <Text style={styles.label}>Category</Text>
           <Dropdown
@@ -745,5 +895,67 @@ const styles = StyleSheet.create({
     marginRight: 20,
     fontWeight: 'bold',
     color: '#5e42fbff'
-  }
+  },
+  searchLoader: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+  },
+  searchInputWrapper: {
+    position: 'relative',
+  },
+  searchResultsDropdown: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginTop: 8,
+    paddingVertical: 6,
+    maxHeight: 300,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  searchResultItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  searchResultContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchResultImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  searchResultText: {
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  searchResultCategory: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
+  },
+  searchResultBadge: {
+    fontSize: 9,
+    color: '#5B5FC7',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  noResultsText: {
+    textAlign: 'center',
+    color: '#999',
+    paddingVertical: 12,
+    fontSize: 13,
+  },
 });

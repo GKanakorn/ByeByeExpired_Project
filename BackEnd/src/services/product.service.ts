@@ -306,7 +306,8 @@ export async function searchProducts(
       expiration_date,
       storage_id,
       location_id,
-      product_templates!inner (
+      owner_id,
+      product_templates (
         id,
         name,
         image_url,
@@ -315,8 +316,28 @@ export async function searchProducts(
       )
     `)
     .eq('location_id', locationId)
-    .ilike('product_templates.name', `%${keyword}%`)
+    .eq('owner_id', userId)
+    .ilike('name', `%${keyword}%`)
     .order('expiration_date', { ascending: true })
+
+  if (error) throw error
+
+  return data || []
+}
+
+export async function searchProductTemplates(keyword: string) {
+  const { data, error } = await supabaseAdmin
+    .from('product_templates')
+    .select(`
+      id,
+      name,
+      category,
+      image_url,
+      barcode
+    `)
+    .ilike('name', `%${keyword}%`)
+    .order('name', { ascending: true })
+    .limit(10)
 
   if (error) throw error
 
