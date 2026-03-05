@@ -10,6 +10,7 @@ import {
     FlatList,
     Alert,
     ActivityIndicator,
+    ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { supabase } from '../src/supabase'
 import { getMyLocations, deleteLocation, Location } from '../src/api/location.api'
 import { useLocation } from '../src/context/LocationContext'
+import { getUserNotifications, LocationNotifications } from '../src/api/notification.api'
 
 
 export default function SettingScreen() {
@@ -27,6 +29,8 @@ export default function SettingScreen() {
     const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [notifications, setNotifications] = useState<LocationNotifications[]>([]);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
 
     // Fetch locations function moved out of useEffect
     const fetchLocations = async () => {
@@ -42,9 +46,27 @@ export default function SettingScreen() {
         setLocations(data);
     };
 
+    // Fetch notifications
+    const fetchNotifications = async () => {
+        try {
+            setLoadingNotifications(true)
+            const { data: session } = await supabase.auth.getSession();
+            const token = session?.session?.access_token;
+            if (!token) return;
+
+            const data = await getUserNotifications(token);
+            setNotifications(data);
+        } catch (err) {
+            console.log("FETCH NOTIFICATIONS ERROR:", err)
+        } finally {
+            setLoadingNotifications(false)
+        }
+    };
+
     useFocusEffect(
         React.useCallback(() => {
             fetchLocations();
+            fetchNotifications();
         }, [])
     );
 
@@ -67,7 +89,7 @@ export default function SettingScreen() {
                     >
                         <Ionicons name="chevron-back" size={28} color="#5A6AE0" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Setting</Text>
+                    <Text style={styles.headerTitle}>Menu</Text>
                     <View style={{ width: 28 }} />
                 </View>
 
@@ -83,144 +105,195 @@ export default function SettingScreen() {
                     </Text>
                 </View>
 
-                {/* Cards */}
-                <FlatList
-                    data={[
-                        ...(locations ?? []),
-                        { 
-                            id: "add", 
-                            name: "", 
-                            type: "personal" as const, 
-                            owner_id: "", 
-                            role: "member" as const 
-                        }
-                    ]}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={{ paddingHorizontal: 20 }}
-                    renderItem={({ item }) => {
-                        console.log('LOCATION ITEM:', item);
-                        if (item.id === "add") {
+                {/* Cards - Horizontal Scroll (Fixed Height) */}
+                <View style={styles.cardsContainer}>
+                    <FlatList
+                        data={[
+                            ...(locations ?? []),
+                            { 
+                                id: "add", 
+                                name: "", 
+                                type: "personal" as const, 
+                                owner_id: "", 
+                                role: "member" as const 
+                            }
+                        ]}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={{ paddingHorizontal: 20 }}
+                        scrollEnabled={true}
+                        renderItem={({ item }) => {
+                            console.log('LOCATION ITEM:', item);
+                            if (item.id === "add") {
+                                return (
+                                    <TouchableOpacity
+                                        style={[styles.card, styles.cardAdd]}
+                                        onPress={() => navigation.navigate("addLocation" as never)}
+                                    >
+                                        <Ionicons name="add-circle-outline" size={48} color="#000" />
+                                        <Text style={styles.addText}>เพิ่มสถานที่ใหม่</Text>
+                                    </TouchableOpacity>
+                                );
+                            }
+
+                            const isSelected = selectedLocationId === item.id;
+                            const isDimmed =
+                                selectedLocationId !== null && selectedLocationId !== item.id;
+
+                            const isPersonal = item.type === "personal";
+
                             return (
-                                <TouchableOpacity
-                                    style={[styles.card, styles.cardAdd]}
-                                    onPress={() => navigation.navigate("addLocation" as never)}
+                                <View
+                                    style={[
+                                        styles.card,
+                                        !isSelected && isDimmed && { opacity: 0.4 },
+                                    ]}
                                 >
-                                    <Ionicons name="add-circle-outline" size={48} color="#000" />
-                                    <Text style={styles.addText}>เพิ่มสถานที่ใหม่</Text>
-                                </TouchableOpacity>
-                            );
-                        }
+                                    {item.role === "owner" && (
+                                    <TouchableOpacity
+                                        style={styles.closeBtn}
+                                        onPress={() => {
+                                            Alert.alert(
+                                                'ยืนยันการลบ',
+                                                'แน่ใจนะว่าจะลบสถานที่นี้?',
+                                                [
+                                                    { text: 'ยกเลิก', style: 'cancel' },
+                                                    {
+                                                        text: 'ลบ',
+                                                        style: 'destructive',
+                                                        onPress: async () => {
+                                                            try {
+                                                                setDeletingId(item.id)
+                                                                const { data: session } = await supabase.auth.getSession()
+                                                                const token = session?.session?.access_token
+                                                                if (!token) return
 
-                        const isSelected = selectedLocationId === item.id;
-                        const isDimmed =
-                            selectedLocationId !== null && selectedLocationId !== item.id;
+                                                                await deleteLocation(token, item.id)
 
-                        const isPersonal = item.type === "personal";
-
-                        return (
-                            <View
-                                style={[
-                                    styles.card,
-                                    !isSelected && isDimmed && { opacity: 0.4 },
-                                ]}
-                            >
-                                {item.role === "owner" && (
-                                <TouchableOpacity
-                                    style={styles.closeBtn}
-                                    onPress={() => {
-                                        Alert.alert(
-                                            'ยืนยันการลบ',
-                                            'แน่ใจนะว่าจะลบสถานที่นี้?',
-                                            [
-                                                { text: 'ยกเลิก', style: 'cancel' },
-                                                {
-                                                    text: 'ลบ',
-                                                    style: 'destructive',
-                                                    onPress: async () => {
-                                                        try {
-                                                            setDeletingId(item.id)
-                                                            const { data: session } = await supabase.auth.getSession()
-                                                            const token = session?.session?.access_token
-                                                            if (!token) return
-
-                                                            await deleteLocation(token, item.id)
-
-                                                            setLocations(prev => prev.filter(l => l.id !== item.id))
-                                                            if (selectedLocationId === item.id) {
-                                                                setSelectedLocationId(null)
+                                                                setLocations(prev => prev.filter(l => l.id !== item.id))
+                                                                if (selectedLocationId === item.id) {
+                                                                    setSelectedLocationId(null)
+                                                                }
+                                                            } catch (e) {
+                                                                Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถลบสถานที่ได้')
+                                                            } finally {
+                                                                setDeletingId(null)
                                                             }
-                                                        } catch (e) {
-                                                            Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถลบสถานที่ได้')
-                                                        } finally {
-                                                            setDeletingId(null)
                                                         }
                                                     }
-                                                }
-                                            ]
-                                        )
-                                    }}
-                                >
-                                    <Ionicons name="close" size={16} color="#999" />
-                                </TouchableOpacity>
-                                )}
-                                {deletingId === item.id && (
-                                    <View style={styles.loadingOverlay}>
-                                        <ActivityIndicator size="small" color="#999" />
-                                    </View>
-                                )}
-                                <Image
-                                    source={
-                                        isPersonal
-                                            ? require("../assets/images/home.png")
-                                            : require("../assets/images/restaurant.png")
-                                    }
-                                    style={styles.cardImage}
-                                />
-
-                                <Text
-                                    style={[
-                                        styles.cardTitle,
-                                        !isPersonal && { color: "#E46B2C" },
-                                    ]}
-                                >
-                                    {item.name}
-                                </Text>
-
-                                <Text style={styles.cardSub}>
-                                    ประเภท: {isPersonal ? "ส่วนตัว" : "ธุรกิจ"}
-                                </Text>
-
-                                <TouchableOpacity
-                                    style={[
-                                        styles.enterBtn,
-                                        isPersonal ? styles.greenBtn : styles.orangeBtn,
-                                    ]}
-                                    onPress={() => {
-                                        if (item.id !== "add") {
-                                            setCurrentLocation(item)
+                                                ]
+                                            )
+                                        }}
+                                    >
+                                        <Ionicons name="close" size={16} color="#999" />
+                                    </TouchableOpacity>
+                                    )}
+                                    {deletingId === item.id && (
+                                        <View style={styles.loadingOverlay}>
+                                            <ActivityIndicator size="small" color="#999" />
+                                        </View>
+                                    )}
+                                    <Image
+                                        source={
+                                            isPersonal
+                                                ? require("../assets/images/home.png")
+                                                : require("../assets/images/restaurant.png")
                                         }
-                                        navigation.goBack()
-                                    }}
-                                >
-                                    <Text style={styles.enterText}>เข้าใช้งาน</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.manageBtn}
-                                    onPress={() => {
-                                        (navigation.navigate as any)("manageLocation", { locationId: item.id });
-                                    }}
-                                >
-                                    <Text style={styles.manageText}>จัดการผู้ใช้</Text>
-                                </TouchableOpacity>
-                            </View>
-                        );
-                    }}
-                />
+                                        style={styles.cardImage}
+                                    />
 
+                                    <Text
+                                        style={[
+                                            styles.cardTitle,
+                                            !isPersonal && { color: "#E46B2C" },
+                                        ]}
+                                    >
+                                        {item.name}
+                                    </Text>
 
+                                    <Text style={styles.cardSub}>
+                                        ประเภท: {isPersonal ? "ส่วนตัว" : "ธุรกิจ"}
+                                    </Text>
 
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.enterBtn,
+                                            isPersonal ? styles.greenBtn : styles.orangeBtn,
+                                        ]}
+                                        onPress={() => {
+                                            if (item.id !== "add") {
+                                                setCurrentLocation(item)
+                                            }
+                                            navigation.goBack()
+                                        }}
+                                    >
+                                        <Text style={styles.enterText}>เข้าใช้งาน</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.manageBtn}
+                                        onPress={() => {
+                                            (navigation.navigate as any)("manageLocation", { locationId: item.id });
+                                        }}
+                                    >
+                                        <Text style={styles.manageText}>จัดการผู้ใช้</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            );
+                        }}
+                    />
+                </View>
+
+                {/* Notifications Title - Fixed */}
+                {notifications.length > 0 && (
+                    <View style={styles.notificationsTitleContainer}>
+                        <Text style={styles.notificationsTitle}>📬 การแจ้งเตือน</Text>
+                    </View>
+                )}
+
+                {/* Notifications - Vertical Scroll */}
+                <ScrollView 
+                    style={styles.notificationsScrollView}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {notifications.length > 0 && (
+                        <View style={styles.notificationsSection}>
+                            {notifications.map((location) => (
+                                <View key={location.locationId} style={styles.locationNotifications}>
+                                    <Text style={styles.locationName}>{location.locationName}</Text>
+                                    {location.notifications?.map((notif, idx) => (
+                                        <View key={idx} style={styles.notificationItem}>
+                                            <View style={styles.notificationContent}>
+                                                {notif.imageUrl && (
+                                                    <Image 
+                                                        source={{ uri: notif.imageUrl }}
+                                                        style={styles.notifImage}
+                                                    />
+                                                )}
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={styles.notifName} numberOfLines={1}>{notif.name}</Text>
+                                                    <Text style={styles.notifType}>
+                                                        {notif.type === 'expiring' ? '🕐 เร็ว ๆ หมดอายุ' : '📉 สินค้าหมด'}
+                                                    </Text>
+                                                    {notif.type === 'expiring' && (
+                                                        <Text style={styles.notifDate}>
+                                                            {notif.daysUntilExpiry === 0 
+                                                                ? 'จะหมดอายุภายในวันนี้!' 
+                                                                : `เหลือ ${notif.daysUntilExpiry} วัน`}
+                                                        </Text>
+                                                    )}
+                                                    {notif.type === 'low_stock' && (
+                                                        <Text style={styles.notifDate}>เหลือ {notif.quantity} ชิ้น</Text>
+                                                    )}
+                                                </View>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            ))}
+                        </View>
+                    )}
+                </ScrollView>
             </SafeAreaView>
         </LinearGradient>
     );
@@ -240,8 +313,18 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#5A6AE0",
     },
+    
+    // Cards Container - Fixed Height for Horizontal Scroll
+    cardsContainer: {
+        height: 230,
+        marginBottom: 16,
+    },
 
-    titleBox: {
+    // Notifications ScrollView - Take Remaining Space
+    notificationsScrollView: {
+        flex: 1,
+        paddingBottom: 20,
+    },    titleBox: {
         alignItems: "center",
         marginTop: 30,
         marginBottom: 20,
@@ -408,5 +491,72 @@ const styles = StyleSheet.create({
 
     addAdminText: {
         fontSize: 14,
+    },
+
+    // Notifications Styles
+    notificationsTitleContainer: {
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 8,
+    },
+    notificationsSection: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+    },
+    notificationsTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#333',
+    },
+    locationNotifications: {
+        backgroundColor: '#FFF',
+        borderRadius: 16,
+        padding: 12,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    locationName: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#5A6AE0',
+        marginBottom: 8,
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#EEE',
+    },
+    notificationItem: {
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    notificationContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    notifImage: {
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        backgroundColor: '#EEE',
+    },
+    notifName: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#333',
+    },
+    notifType: {
+        fontSize: 12,
+        color: '#FF6EC7',
+        fontWeight: '500',
+        marginTop: 2,
+    },
+    notifDate: {
+        fontSize: 11,
+        color: '#999',
+        marginTop: 2,
     },
 });

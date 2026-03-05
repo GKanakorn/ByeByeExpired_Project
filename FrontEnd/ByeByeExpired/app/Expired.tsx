@@ -114,7 +114,7 @@ export default function ExpiredScreen() {
       <SafeAreaView style={{ flex: 1  ,paddingHorizontal: 16, paddingTop: 8}}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push('/overview')} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color="#ffffff" />
             <Text style={styles.backText}>Overview</Text>
           </TouchableOpacity>

@@ -165,9 +165,7 @@ export default function showDetailBusiness() {
 
       await updateProduct(productId as string, payload)
       Alert.alert('Success', 'แก้ไขสินค้าเรียบร้อย 🎉')
-      router.replace('/overview')
-
-      router.replace('/overview')
+      router.back()
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Save failed')
     } finally {
@@ -314,7 +312,7 @@ export default function showDetailBusiness() {
   )
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
-    router.replace('/overview')
+    router.back()
   }
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -744,11 +742,11 @@ export default function showDetailBusiness() {
                       const curQty = Number(quantity) || 0
                       if (num >= curQty) {
                         Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
-                        router.replace('/overview')
+                        router.back()
                       } else {
                         setQuantity((curQty - num).toString())
                         Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
-                        router.replace('/overview')
+                        router.back()
                       }
                     } catch (err: any) {
                       Alert.alert('Error', err.message || 'Delete failed')

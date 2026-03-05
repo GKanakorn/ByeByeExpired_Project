@@ -110,7 +110,7 @@ export default function SupplierScreen() {
       <View style={styles.fixedHeader}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push('/overview')}>
+          <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={28} color="#7C3AED" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Supplier Tracking</Text>

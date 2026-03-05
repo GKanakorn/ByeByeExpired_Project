@@ -30,7 +30,7 @@ type Location = {
   role: "owner" | "admin" | "member"
 }
 
-export default function BusinessOverview({ location }: { location: Location }) {
+export default function BusinessOverview({ location, notificationCount = 0 }: { location: Location, notificationCount?: number }) {
   const router = useRouter();
   const [storages, setStorages] = useState<any[]>([])
   const [loadingStorages, setLoadingStorages] = useState(false)
@@ -228,7 +228,16 @@ export default function BusinessOverview({ location }: { location: Location }) {
               style={styles.settingBtn}
               onPress={() => router.push("/setting")}
             >
-              <Ionicons name="settings-outline" size={20} color="#FF6EC7" />
+              <View style={styles.iconWithBadge}>
+                <Ionicons name="menu" size={24} color="#FF6EC7" />
+                {notificationCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {notificationCount > 9 ? '9+' : notificationCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -721,8 +730,41 @@ const styles = StyleSheet.create({
   },
   settingBtn: {
     backgroundColor: "#FFF",
-    padding: 8,
+    padding: 10,
     borderRadius: 20,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconWithBadge: {
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: '#FF3B30',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    borderWidth: 2,
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+  },
+  badgeText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 11,
   },
   rightIcons: {
     flexDirection: "row",

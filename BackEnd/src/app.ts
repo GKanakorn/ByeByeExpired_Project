@@ -8,6 +8,7 @@ import productRoute from './routes/product.route'
 import supplierRoutes from "./routes/supplier.route"
 import profileRoute from './routes/profile.route'
 import manageLocationRoute from './routes/manageLocation.route'
+import notificationRoute from './routes/notification.route'
 
 
 const app = express()
@@ -22,5 +23,6 @@ app.use('/products', productRoute)
 app.use("/api/suppliers", supplierRoutes)
 app.use('/profile', profileRoute)   
 app.use('/api', manageLocationRoute)
+app.use('/api/notifications', notificationRoute)
 
 export default app

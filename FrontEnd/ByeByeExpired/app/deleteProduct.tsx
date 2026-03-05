@@ -153,7 +153,7 @@ export default function DeleteProduct() {
     >
       {/* ===== MAIN PAGE ===== */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/overview')}>
+        <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={34} color="#434bdfff" />
         </TouchableOpacity>
         <Text style={styles.title}>DeleteProduct</Text>
