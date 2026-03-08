@@ -9,7 +9,8 @@ import {
   Modal,
   Platform,
   Alert,
-  Animated
+  Animated,
+  KeyboardAvoidingView
 } from 'react-native';
 import { BlurView } from 'expo-blur'
 import { useEffect, useState } from 'react';
@@ -29,6 +30,7 @@ import { updateProduct, deleteProductQuantity } from '../src/api/product.api';
 import * as ImageManipulator from 'expo-image-manipulator'
 import { permissions } from '../src/utils/permissions'
 import { useLocation } from "../src/context/LocationContext"
+import { PanGestureHandler, State } from 'react-native-gesture-handler'
 
 interface Option {
   label: string;
@@ -85,11 +87,13 @@ export default function ShowDetailPersonal() {
   // delete modal states
   const [showDeleteQtyModal, setShowDeleteQtyModal] = useState(false)
   const [deleteQty, setDeleteQty] = useState(1)
-
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   // toast state
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
   const toastOpacity = React.useRef(new Animated.Value(0)).current
+
+  const translateY = React.useRef(new Animated.Value(0)).current
 
   const showToast = (msg: string) => {
     setToastMsg(msg)
@@ -108,6 +112,32 @@ export default function ShowDetailPersonal() {
       }, 2000)
     })
   }
+  const handleConfirmDelete = async () => {
+  try {
+    if (!productId) return
+
+    await deleteProductQuantity(
+      productId as string,
+      deleteQty
+    )
+
+    setShowConfirmDelete(false)
+
+    const newQty = (Number(quantity) || 0) - deleteQty
+
+    if (newQty <= 0) {
+      router.back()
+      return
+    }
+
+    setQuantity(newQty.toString())
+
+    showToast('ลบสินค้าเรียบร้อย')
+  } catch (err) {
+    console.log(err)
+    Alert.alert('Error', 'Delete failed')
+  }
+}
 
   useEffect(() => {
     if (!productId) return
@@ -394,50 +424,54 @@ export default function ShowDetailPersonal() {
 
   return (
     <LinearGradient colors={['#cbd1faff', '#eef4f8ff', '#cfe9f9ff']} style={styles.bg}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
-              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
-            </TouchableOpacity>
-
-            {canManageProduct && (
-              <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
-                <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>
-                  Save
-                </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
+                <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
               </TouchableOpacity>
-            )}
+
+              {canManageProduct && (
+                <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
+                  <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>
+                    Save
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <Text style={styles.headerTitle}>
+              {canManageProduct ? 'Edit Product' : 'View Product'}
+            </Text>
           </View>
 
-          <Text style={styles.headerTitle}>
-            {canManageProduct ? 'Edit Product' : 'View Product'}
-          </Text>
-        </View>
-
-        {canManageProduct ? (
-          <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
-            {image ? (
-              <Image
-                source={{ uri: image }}
-                style={{ width: 120, height: 120, borderRadius: 8 }}
-              />
-            ) : (
-              <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.imageBox}>
-            {image ? (
-              <Image
-                source={{ uri: image }}
-                style={{ width: 120, height: 120, borderRadius: 8 }}
-              />
-            ) : (
-              <Text style={{ color: '#999' }}>No Image</Text>
-            )}
-          </View>
-        )}
+          {canManageProduct ? (
+            <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
+              {image ? (
+                <Image
+                  source={{ uri: image }}
+                  style={{ width: 120, height: 120, borderRadius: 8 }}
+                />
+              ) : (
+                <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.imageBox}>
+              {image ? (
+                <Image
+                  source={{ uri: image }}
+                  style={{ width: 120, height: 120, borderRadius: 8 }}
+                />
+              ) : (
+                <Text style={{ color: '#999' }}>No Image</Text>
+              )}
+            </View>
+          )}
 
         <View style={styles.card}>
           <Text style={styles.label}>Name</Text>
@@ -552,43 +586,52 @@ export default function ShowDetailPersonal() {
             )
           )}
         </View>
+
         {canManageProduct && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            activeOpacity={0.85}
-            onPress={() => {
-              setDeleteQty(1)
-              setShowDeleteQtyModal(true)
-            }}
-          >
-            <Text style={styles.deleteButtonText}>Delete</Text>
-          </TouchableOpacity>
-        )}
+            <TouchableOpacity
+              style={styles.deleteButton}
+              activeOpacity={0.85}
+              onPress={() => {
+                setDeleteQty(1)
+                setShowDeleteQtyModal(true)
+              }}
+            >
+              <Text style={styles.deleteButtonText}>Delete</Text>
+            </TouchableOpacity>
+          )}
 
         {/* delete quantity modal */}
         <Modal visible={showDeleteQtyModal} transparent animationType="slide">
           <BlurView intensity={40} tint="dark" style={styles.bottomOverlay}>
             <View style={styles.modalBox}>
-              <View style={styles.handle} />
-              <Text style={styles.modalTitle}>ลบสินค้าออกจากสต๊อก</Text>
-              <View style={styles.sectionDivider} />
+            {/* drag handle */}
+            <View style={styles.modalHandle} />
+            
+            <Text style={styles.modalTitle}>ลบสินค้าออกจากสต๊อก</Text>
 
-              <View style={styles.productRow}>
-                <Image
-                  source={{ uri: image || 'https://via.placeholder.com/100' }}
-                  style={styles.modalImage}
-                />
-                <View style={{ marginLeft: 50 }}>
-                  <Text style={styles.name}>{name}</Text>
-                  <Text style={styles.detail}>{quantity} piece</Text>
-                  <Text style={styles.exp}>
-                    EXP : {expireDate.toLocaleDateString('en-GB')}
-                  </Text>
-                </View>
+            {/* ขีดแบ่ง */}
+            <View style={styles.sectionDivider} />
+
+            <View style={styles.productRow}>
+              <Image
+                source={{ uri: image || 'https://via.placeholder.com/100' }}
+                style={styles.modalImage}
+              />
+
+              <View style={{ marginLeft: 20 }}>
+                <Text style={styles.name}>{name}</Text>
+                <Text style={styles.detail}>{quantity} piece</Text>
+                <Text style={styles.exp}>
+                  EXP : {expireDate.toLocaleDateString('en-GB')}
+                </Text>
               </View>
+            </View>
 
-              <View style={styles.sectionDivider} />
-              <Text style={{ textAlign: 'center', marginTop: 10 }}>จำนวนที่ต้องการลบ</Text>
+            {/* ขีดแบ่ง */}
+            <View style={styles.sectionDivider} />
+            <Text style={{ textAlign: 'center', marginTop: 10 }}>
+              จำนวนที่ต้องการลบ
+            </Text>
 
               {/* counter + all button */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
@@ -628,45 +671,54 @@ export default function ShowDetailPersonal() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.confirmBtn}
-                  onPress={async () => {
-                    if (!productId) return
-                    const num = deleteQty
-                    const curQty = Number(quantity) || 0
-                    if (!num || num <= 0) {
-                      Alert.alert('Error', 'จำนวนไม่ถูกต้อง')
-                      return
-                    }
-                    if (num > curQty) {
-                      showToast('ไม่สามารถลบเกินจำนวนที่มีอยู่')
-                      return
-                    }
-                    try {
-                      // use shared API helper
-                      await deleteProductQuantity(productId as string, num)
-
-                      const curQty = Number(quantity) || 0
-                      if (num >= curQty) {
-                        Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
-                        router.back()
-                      } else {
-                        setQuantity((curQty - num).toString())
-                        Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
-                        router.back()
-                      }
-                    } catch (err: any) {
-                      Alert.alert('Error', err.message || 'Delete failed')
-                    } finally {
-                      setShowDeleteQtyModal(false)
-                    }
+                  onPress={() => {
+                    setShowDeleteQtyModal(false)
+                    setShowConfirmDelete(true)
                   }}
                 >
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '500' }}>ยืนยัน</Text>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '500' }}>
+                    ยืนยัน
+                  </Text>
                 </TouchableOpacity>
-              </View>
-            </View>
+             </View>   {/* rowBtn */}
+            </View>     {/* modalBox */}
           </BlurView>
         </Modal>
-      </ScrollView>
+
+      {/* confirm delete modal */}
+      {showConfirmDelete && (
+      <View style={styles.confirmOverlay}>
+
+       <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
+        <View style={styles.confirmBox}>
+          <Ionicons name="warning" size={55} color="#F4B400" />
+
+          <Text style={styles.confirmTitle}>
+            ยืนยันการลบสินค้า
+          </Text>
+
+          <Text style={styles.confirmText}>
+            คุณต้องการลบสินค้า {name} จำนวน {deleteQty} ชิ้น
+          </Text>
+
+          <View style={styles.confirmButtons}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setShowConfirmDelete(false)}
+            >
+              <Text>ยกเลิก</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              onPress={handleConfirmDelete}
+            >
+              <Text style={{ color: "#fff" }}>ยืนยัน</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        </View>
+)}
 
       {/* bottom toast */}
       {toastVisible && (
@@ -724,6 +776,57 @@ export default function ShowDetailPersonal() {
           </TouchableOpacity>
         </Modal>
       )}
+
+      {canManageProduct && (
+        <Modal transparent animationType="fade" visible={showStorage || showExpire}>
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={() => {
+              setShowStorage(false);
+              setShowExpire(false);
+            }}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.calendarBox}>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                accentColor="#5B5FC7"
+                themeVariant="light"
+                onChange={(e: any, d?: Date) => {
+                  if (d) setTempDate(d);
+                }}
+              />
+
+              <View style={styles.calendarActions}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowStorage(false);
+                    setShowExpire(false);
+                  }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    if (showStorage) setStorageDate(tempDate);
+                    if (showExpire) setExpireDate(tempDate);
+                    setShowStorage(false);
+                    setShowExpire(false);
+                  }}
+                >
+                  <Text style={styles.okText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
+        </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
@@ -759,7 +862,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#',
+    shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 4
@@ -817,9 +920,8 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(34,34,34,0.35)',
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center"
   },
   bottomOverlay: {
     flex: 1,
@@ -1012,14 +1114,16 @@ const styles = StyleSheet.create({
   },
   toast: {
     position: 'absolute',
-    bottom: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    top: '50%',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center',
+    transform: [{ translateY: -25 }],
   },
   toastText: {
     color: '#fff',
@@ -1031,18 +1135,53 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginHorizontal: 10,
   },
-  handle: {
-    width: 50,
-    height: 5,
-    backgroundColor: '#ddd',
-    borderRadius: 10,
-    alignSelf: 'center',
-    marginBottom: 15,
-  },
   sectionDivider: {
     width: "100%",
     height: 1,
     backgroundColor: "#e6e7f0",
     marginVertical: 15,
   },
+ confirmOverlay: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "rgba(0,0,0,0.2)"   // ⭐ เพิ่มบรรทัดนี้
+},
+confirmBox: {
+  width: "85%",
+  backgroundColor: "#fff",
+  borderRadius: 25,
+  padding: 25,
+  alignItems: "center",
+},
+
+confirmTitle: {
+  fontSize: 20,
+  fontWeight: "bold",
+  marginTop: 10,
+},
+
+confirmText: {
+  marginTop: 10,
+  textAlign: "center",
+  color: "#555",
+},
+
+confirmButtons: {
+  flexDirection: "row",
+  marginTop: 20,
+},
+modalHandle: {
+  width: 50,
+  height: 5,
+  backgroundColor: '#D1D1D6',
+  borderRadius: 3,
+  alignSelf: 'center',
+  marginTop: 10,
+  marginBottom: 10,
+},
 });

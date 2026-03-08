@@ -10,7 +10,8 @@ import {
   Platform,
   Alert,
   FlatList,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView
 } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import React from 'react'
@@ -425,12 +426,13 @@ export default function AddProductScreen() {
   };
 
   return (
-    <LinearGradient colors={['#cbd1faff', '#eef4f8ff', '#cfe9f9ff']} style={styles.bg}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{flex:1}}>
+      <LinearGradient colors={['#cbd1faff', '#eef4f8ff', '#cfe9f9ff']} style={styles.bg}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
-              <Text style={styles.headerBtn}>Cancel</Text>
+              <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
@@ -641,7 +643,8 @@ export default function AddProductScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </LinearGradient>
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -856,3 +859,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 });
+

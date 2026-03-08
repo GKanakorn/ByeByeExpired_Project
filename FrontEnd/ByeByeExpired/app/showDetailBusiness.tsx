@@ -9,7 +9,8 @@ import {
   Modal,
   Platform,
   Alert,
-  Animated
+  Animated,
+  KeyboardAvoidingView
 } from 'react-native';
 import { BlurView } from 'expo-blur'
 import { useEffect, useState } from 'react';
@@ -82,6 +83,7 @@ export default function showDetailBusiness() {
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
   const toastOpacity = React.useRef(new Animated.Value(0)).current
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
 
   const showToast = (msg: string) => {
     setToastMsg(msg)
@@ -100,6 +102,30 @@ export default function showDetailBusiness() {
       }, 2000)
     })
   }
+  const handleDelete = async () => {
+    if (!productId) return
+
+    try {
+      await deleteProductQuantity(productId as string, deleteQty)
+
+      const newQty = (Number(quantity) || 0) - deleteQty
+
+      setShowConfirmDelete(false)
+
+      if (newQty <= 0) {
+        router.back()
+        return
+      }
+
+      setQuantity(newQty.toString())
+
+      showToast('ลบสินค้าเรียบร้อย')
+
+    } catch (err) {
+      Alert.alert('Error', 'Delete failed')
+    }
+  }
+
   const [store, setStore] = useState('');
   const [lowStock, setLowStock] = useState(false);
   const [expireAlert, setExpireAlert] = useState(false)
@@ -428,9 +454,19 @@ export default function showDetailBusiness() {
   };
 
   return (
-    <LinearGradient colors={['#cbd1faff', '#eef4f8ff', '#cfe9f9ff']} style={styles.bg}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+    <View style={styles.bg}>
+      <LinearGradient colors={['#cbd1faff', '#eef4f8ff', '#cfe9f9ff']} style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 0 }}
+        >
+          <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
               <Text style={[styles.headerBtn, { fontWeight: 'bold' }]}>Cancel</Text>
@@ -714,55 +750,68 @@ export default function showDetailBusiness() {
                 </View>
               </View>
 
-              <View style={styles.rowBtn}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => setShowDeleteQtyModal(false)}
-                >
-                  <Text style={{ fontSize: 16, fontWeight: '500' }}>ยกเลิก</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.confirmBtn}
-                  onPress={async () => {
-                    if (!productId) return
-                    const num = deleteQty
-                    const curQty = Number(quantity) || 0
-                    if (!num || num <= 0) {
-                      Alert.alert('Error', 'จำนวนไม่ถูกต้อง')
-                      return
-                    }
-                    if (num > curQty) {
-                      showToast('ไม่สามารถลบเกินจำนวนที่มีอยู่')
-                      return
-                    }
-                    try {
-                      // use shared API helper
-                      await deleteProductQuantity(productId as string, num)
+             <View style={styles.rowBtn}>
+  <TouchableOpacity
+    style={styles.cancelBtn}
+    onPress={() => setShowDeleteQtyModal(false)}
+  >
+    <Text style={{ fontSize: 16, fontWeight: '500' }}>ยกเลิก</Text>
+  </TouchableOpacity>
 
-                      const curQty = Number(quantity) || 0
-                      if (num >= curQty) {
-                        Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
-                        router.back()
-                      } else {
-                        setQuantity((curQty - num).toString())
-                        Alert.alert('Deleted', 'ลบสินค้าเรียบร้อย')
-                        router.back()
-                      }
-                    } catch (err: any) {
-                      Alert.alert('Error', err.message || 'Delete failed')
-                    } finally {
-                      setShowDeleteQtyModal(false)
-                    }
-                  }}
-                >
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '500' }}>ยืนยัน</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </BlurView>
-        </Modal>
-      </ScrollView>
-      {/* ===== CALENDAR MODAL ===== */}
+  <TouchableOpacity
+    style={styles.confirmBtn}
+    onPress={() => {
+      setShowDeleteQtyModal(false)
+      setShowConfirmDelete(true)
+    }}
+  >
+    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '500' }}>
+      ยืนยัน
+    </Text>
+  </TouchableOpacity>
+  </View>
+
+</View>
+</BlurView>
+</Modal>
+<Modal
+  visible={showConfirmDelete}
+  transparent
+  animationType="fade"
+>
+  <View style={styles.confirmOverlay}>
+    <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
+
+    <View style={styles.confirmBox}>
+      <Ionicons name="warning" size={55} color="#F4B400" />
+
+      <Text style={styles.confirmTitle}>
+        ยืนยันการลบสินค้า
+      </Text>
+
+      <Text style={styles.confirmText}>
+        คุณต้องการลบสินค้า {name} จำนวน {deleteQty} ชิ้น
+      </Text>
+
+      <View style={styles.confirmButtons}>
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={() => setShowConfirmDelete(false)}
+        >
+          <Text>ยกเลิก</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.confirmBtn}
+          onPress={handleDelete}
+        >
+          <Text style={{ color: "#fff" }}>ยืนยัน</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+
+  </View>
+</Modal>
       {canManageProduct && (
         <Modal transparent animationType="fade" visible={showStorage || showExpire}>
           <TouchableOpacity
@@ -810,7 +859,10 @@ export default function showDetailBusiness() {
           </TouchableOpacity>
         </Modal>
       )}
-    </LinearGradient>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 }
 
@@ -850,7 +902,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#',
+    shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 4
@@ -1116,14 +1168,16 @@ const styles = StyleSheet.create({
   },
   toast: {
     position: 'absolute',
-    bottom: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    top: '50%',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center',
+    transform: [{ translateY: -25 }],
   },
   toastText: {
     color: '#fff',
@@ -1149,4 +1203,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#e6e7f0",
     marginVertical: 15,
   },
+  confirmOverlay: {
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  left: 0,
+  right: 0,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+confirmBox: {
+  width: '80%',
+  backgroundColor: '#fff',
+  borderRadius: 20,
+  padding: 25,
+  alignItems: 'center',
+},
+
+confirmTitle: {
+  fontSize: 20,
+  fontWeight: 'bold',
+  marginTop: 10,
+},
+
+confirmText: {
+  textAlign: 'center',
+  marginVertical: 15,
+},
+
+confirmButtons: {
+  flexDirection: 'row',
+  marginTop: 10,
+},
 });
