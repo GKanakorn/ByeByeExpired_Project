@@ -10,6 +10,7 @@ import {
     Modal,
     TextInput,
     Pressable,
+    Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +21,7 @@ import {
     deleteMember,
     inviteMemberToLocation,
 } from "../src/api/manageLocation.api";
+import { getMyLocations } from "../src/api/location.api";
 import { supabase } from "@/src/supabase";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -37,6 +39,7 @@ export default function ManageLocationScreen() {
     const [locationName, setLocationName] = useState<string>("");
     const [ownerId, setOwnerId] = useState<string>("");
     const [currentUserId, setCurrentUserId] = useState<string>("");
+    const [locationType, setLocationType] = useState<'personal' | 'business' | null>(null);
 
     const [members, setMembers] = useState<Member[]>([]);
     const [loading, setLoading] = useState(true);
@@ -58,7 +61,7 @@ export default function ManageLocationScreen() {
             const token = session?.session?.access_token;
 
             if (!token) {
-                Alert.alert("Error", "ไม่พบ token");
+                Alert.alert("Error", "Token not found");
                 return;
             }
 
@@ -70,8 +73,16 @@ export default function ManageLocationScreen() {
             setCurrentUserId(userData.user?.id || "");
 
             setMembers(data.members);
+            // also fetch location type so we know which icon to show
+            try {
+              const allLocs = await getMyLocations(token);
+              const found = allLocs.find((l: any) => l.id === locationId);
+              setLocationType(found?.type || null);
+            } catch (e) {
+              console.log('Failed to fetch location type', e);
+            }
         } catch (err) {
-            Alert.alert("Error", "โหลดข้อมูลไม่สำเร็จ");
+            Alert.alert("Error", "Failed to load data");
         } finally {
             setLoading(false);
         }
@@ -95,17 +106,17 @@ export default function ManageLocationScreen() {
                 )
             );
         } catch {
-            Alert.alert("Error", "เปลี่ยน role ไม่สำเร็จ");
+            Alert.alert("Error", "Failed to change role");
         } finally {
             setUpdatingId(null);
         }
     };
 
     const removeMember = async (memberId: string) => {
-        Alert.alert("ยืนยัน", "ต้องการลบสมาชิกคนนี้?", [
-            { text: "ยกเลิก", style: "cancel" },
+        Alert.alert("Confirm", "Do you want to remove this member?", [
+            { text: "Cancel", style: "cancel" },
             {
-                text: "ลบ",
+                text: "Remove",
                 style: "destructive",
                 onPress: async () => {
                     try {
@@ -121,7 +132,7 @@ export default function ManageLocationScreen() {
                             prev.filter((m) => m.id !== memberId)
                         );
                     } catch {
-                        Alert.alert("Error", "ลบสมาชิกไม่สำเร็จ");
+                        Alert.alert("Error", "Failed to remove member");
                     } finally {
                         setUpdatingId(null);
                     }
@@ -156,7 +167,7 @@ export default function ManageLocationScreen() {
             setInviteEmail("");
             fetchData();
         } catch {
-            Alert.alert("Error", "เชิญสมาชิกไม่สำเร็จ");
+            Alert.alert("Error", "Failed to invite member");
         }
     };
 
@@ -261,8 +272,20 @@ export default function ManageLocationScreen() {
 
                 {/* Title */}
                 <View style={styles.titleBox}>
+                    {locationType && (
+                        <View style={styles.iconWrapper}>
+                          <Image
+                              source={
+                                  locationType === 'personal'
+                                      ? require('../assets/images/home.png')
+                                      : require('../assets/images/business.png')
+                              }
+                              style={styles.locationIcon}
+                          />
+                        </View>
+                    )}
                     <Text style={styles.title}>{locationName}</Text>
-                    <Text style={styles.subtitle}>จัดการสมาชิกในสถานที่นี้</Text>
+                    <Text style={styles.subtitle}>Manage members in this location</Text>
                     {isOwner && (
                         <TouchableOpacity
                             style={styles.inviteBtn}
@@ -288,7 +311,7 @@ export default function ManageLocationScreen() {
                         contentContainerStyle={{ padding: 20 }}
                         ListEmptyComponent={
                             <Text style={{ textAlign: "center", marginTop: 40 }}>
-                                ไม่มีสมาชิก
+                                No members found
                             </Text>
                         }
                     />
@@ -383,11 +406,31 @@ const styles = StyleSheet.create({
     },
     titleBox: {
         alignItems: "center",
+        justifyContent: "center",
         marginTop: 30,
     },
     title: {
         fontSize: 24,
         fontWeight: "700",
+        marginTop: 8,
+    },
+    iconWrapper: {
+        width: 130,
+        height: 130,
+        borderRadius: 65,
+        backgroundColor: '#ffffff',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: -10,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    locationIcon: {
+        width: 115,
+        height: 115,
+        resizeMode: 'contain',
     },
     subtitle: {
         fontSize: 14,
