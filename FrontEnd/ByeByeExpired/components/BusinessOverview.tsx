@@ -120,9 +120,9 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
           })
         }}
       >
-        <Text style={{ color: "white", fontWeight: "600" }}>
+        <Text style={{ color: "white", fontWeight: "600",fontSize:12 }}>
           Edit
-        </Text>
+        </Text> 
       </TouchableOpacity>
 
       {/* DELETE */}
@@ -130,7 +130,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
         style={styles.deleteButton}
         onPress={() => handleDeleteStorage(storageId)}
       >
-        <Text style={{ color: "white", fontWeight: "600" }}>
+        <Text style={{ color: "white", fontWeight: "600",fontSize:12 }}>
           Delete
         </Text>
       </TouchableOpacity>
@@ -180,16 +180,19 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
+        <Text style={styles.locationTitle}>
+          {location.name}
+        </Text>
         <View style={styles.header}>
+
           {/* ซ้าย */}
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <View style={styles.dateBox}>
               <Image
-                source={require("../assets/images/business.png")}
+                source={require("../assets/images/business1.png")}
                 style={styles.headerIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.dateText}>{location.name}</Text>
               <Text style={styles.dateText}>{formattedDate}</Text>
             </View>
           </View>
@@ -207,7 +210,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
                 router.push('/Dashboard')
               }}
             >
-              <Ionicons name="pie-chart-outline" size={20} color="#FF6EC7" />
+              <Ionicons name="pie-chart-outline" size={20} color="#2269cc" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -221,7 +224,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
                 router.push('/supplier')
               }}
             >
-              <Ionicons name="cube-outline" size={20} color="#FF6EC7" />
+              <Ionicons name="cube-outline" size={20} color="#2269cc" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -229,7 +232,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
               onPress={() => router.push("/setting")}
             >
               <View style={styles.iconWithBadge}>
-                <Ionicons name="menu" size={24} color="#FF6EC7" />
+                <Ionicons name="menu" size={24} color="#2269cc" />
                 {notificationCount > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
@@ -281,7 +284,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
             <MaterialIcons name="error-outline" size={20} color="#F5A623" />
             <Text style={[styles.sectionText, { color: "#ce840d" }]}>Nearly expired</Text>
           </View>
-          <View style={styles.badge}>
+          <View style={styles.badgeNear}>
             <Text style={styles.badgeText}>{nearlyExpired.length}</Text>
           </View>
         </LinearGradient>
@@ -635,7 +638,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
             onPress={() => setShowPlusMinus(!showPlusMinus)}
           >
             <Image
-              source={require("../assets/images/add.png")}
+              source={require("../assets/images/add1.png")}
               style={styles.addIcon}
             />
           </TouchableOpacity>
@@ -715,20 +718,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 50, // เว้นระยะจากขอบบน
-    marginBottom: 2,
+    paddingTop: 15, // เว้นระยะจากขอบบน
+    marginBottom: 4,
   },
   dateBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFE4F2",
+    backgroundColor: "#c3dfff",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
   },
   dateText: {
     marginLeft: 6,
-    color: "#FF6EC7",
+    color: "#2269cc",
     fontWeight: "600",
   },
   settingBtn: {
@@ -739,6 +742,11 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   iconWithBadge: {
     position: 'relative',
@@ -842,7 +850,7 @@ const styles = StyleSheet.create({
     width: 90,
   },
   cardEx: {
-    backgroundColor: "#BE9090",
+    backgroundColor: "#ffdddd",
     padding: 10,
     borderRadius: 12,
     marginRight: 10,
@@ -858,11 +866,11 @@ const styles = StyleSheet.create({
   },
   cardDateEx: {
     fontSize: 10,
-    color: "#ffffff",
+    color: "#db4a4a",
   },
   cardDateNear: {
     fontSize: 10,
-    color: "#888",
+    color: "#ba8917",
   },
 
   NearlyExpiredBox: {
@@ -950,7 +958,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 60,
     alignSelf: "center",
-    backgroundColor: "#F19BEA",
+    backgroundColor: "#7ca9ff",
     borderRadius: 50,
     height: 50,
     width: 50,
@@ -961,6 +969,16 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: "#FFF",
   },
+  badgeNear: {
+    backgroundColor: "#ff9f19",
+    width: 28,
+    height: 28,
+
+    borderRadius: 14,   // ต้อง = width/2
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   badgeEx: {
     backgroundColor: "#FF4D4D",
     width: 28,
@@ -988,7 +1006,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 25,
-    backgroundColor: "#ff9eef",
+    backgroundColor: "#7cc2ff",
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
@@ -998,7 +1016,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 25,
-    backgroundColor: "#ff9eef",
+    backgroundColor: "#7cc2ff",
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
@@ -1027,26 +1045,36 @@ const styles = StyleSheet.create({
     width: 27,
     height: 27,
   },
-  deleteButton: {
-    backgroundColor: '#FF3B30',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 100,
-    borderRadius: 12,
-    marginVertical: 5,
-  },
-  editButton: {
-    backgroundColor: "#4CAF50",
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 100,
-    borderRadius: 12,
-    marginVertical: 5,
-  },
-  deleteText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
+     deleteButton: {
+        backgroundColor: '#ff5b52',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
+        height: 40,
+        borderRadius: 50,
+        marginVertical: 15,
+    },
+
+    editButton: {
+        backgroundColor: "#66ba69",
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
+        height: 40,
+        borderRadius: 50,
+        marginVertical: 15,
+    },
+
+    deleteText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+
+    editText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+
   searchOverlayBackground: {
     position: "absolute",
     top: 0,
@@ -1082,4 +1110,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#333',
   },
+
+  locationTitle: {
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#2269cc",
+    marginTop:50,
+    marginBottom: 10,
+  }
+
 });
