@@ -1,15 +1,20 @@
 //scanBarcode.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View, Animated, ActivityIndicator } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View, Animated, ActivityIndicator, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Camera, CameraView } from 'expo-camera';
+import { Camera, CameraView, BarcodeScanningResult } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router'
 import { useFocusEffect } from 'expo-router'
 import { lookupBarcode } from '../src/api/barcode.api'
 import * as Haptics from 'expo-haptics'
 import { Audio } from 'expo-av'
+
+// 📐 คำนวณพื้นที่สแกน (กรอบสีม่วง)
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SCAN_WINDOW_WIDTH = 360;
+const SCAN_WINDOW_HEIGHT = 180;
 
 export default function ScanBarcodeScreen() {
   const router = useRouter();
@@ -127,9 +132,50 @@ export default function ScanBarcodeScreen() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
   }
 
-  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+  // 📐 เช็คว่า barcode อยู่ในกรอบสีม่วงหรือไม่
+  const isBarcodeInScanWindow = (result: BarcodeScanningResult): boolean => {
+    if (!result.bounds) return true; // ถ้าไม่มี bounds ให้ผ่าน
+    
+    const { origin, size } = result.bounds;
+    const barcodeX = origin.x;
+    const barcodeY = origin.y;
+    const barcodeWidth = size.width;
+    const barcodeHeight = size.height;
+    
+    // คำนวณตำแหน่งกรอบสแกน (กลางจอ)
+    const scanWindowLeft = (SCREEN_WIDTH - SCAN_WINDOW_WIDTH) / 2;
+    const scanWindowRight = scanWindowLeft + SCAN_WINDOW_WIDTH;
+    const scanWindowTop = (SCREEN_HEIGHT - SCAN_WINDOW_HEIGHT) / 2 - 50; // ปรับตามตำแหน่งจริง
+    const scanWindowBottom = scanWindowTop + SCAN_WINDOW_HEIGHT;
+    
+    // เช็คว่า center ของ barcode อยู่ในกรอบหรือไม่
+    const barcodeCenterX = barcodeX + barcodeWidth / 2;
+    const barcodeCenterY = barcodeY + barcodeHeight / 2;
+    
+    const isInWindow = 
+      barcodeCenterX >= scanWindowLeft &&
+      barcodeCenterX <= scanWindowRight &&
+      barcodeCenterY >= scanWindowTop &&
+      barcodeCenterY <= scanWindowBottom;
+    
+    console.log('📐 Barcode bounds:', { barcodeX, barcodeY, barcodeCenterX, barcodeCenterY });
+    console.log('📐 Scan window:', { scanWindowLeft, scanWindowRight, scanWindowTop, scanWindowBottom });
+    console.log('📐 Is in window:', isInWindow);
+    
+    return isInWindow;
+  }
+
+  const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
     if (scannedRef.current) return
+    
+    // 🔒 เช็คว่า barcode อยู่ในกรอบสีม่วงหรือไม่
+    if (!isBarcodeInScanWindow(result)) {
+      console.log('⚠️ Barcode outside scan window, ignoring...');
+      return;
+    }
+    
     scannedRef.current = true
+    const { data } = result;
 
     await playBeep()
     setIsScanned(true)
