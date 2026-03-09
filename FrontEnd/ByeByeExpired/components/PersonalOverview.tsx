@@ -149,7 +149,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
 
             {/* EDIT */}
             <TouchableOpacity
-                style={styles.editButton} 
+                style={styles.editButton}
                 onPress={() => {
                     router.push({
                         pathname: "/addStorage",
@@ -157,7 +157,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                     })
                 }}
             >
-                <Text style={{ color: "white", fontWeight: "600",fontSize:14 }}>
+                <Text style={{ color: "white", fontWeight: "600", fontSize: 14 }}>
                     Edit
                 </Text>
             </TouchableOpacity>
@@ -167,7 +167,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                 style={styles.deleteButton}
                 onPress={() => handleDeleteStorage(storageId)}
             >
-                <Text style={{ color: "white", fontWeight: "600",fontSize:14 }}>
+                <Text style={{ color: "white", fontWeight: "600", fontSize: 14 }}>
                     Delete
                 </Text>
             </TouchableOpacity>
@@ -333,43 +333,55 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
 
                 <View style={styles.NearlyExpiredBox}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {nearlyExpired.map((item) => {
-                            const formatted = new Date(item.expiration_date)
-                                .toLocaleDateString("en-GB", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                })
-                                .toUpperCase()
 
-                            return (
-                                <TouchableOpacity
-                                    key={item.id}
-                                    style={styles.cardNear}
-                                    activeOpacity={0.8}
-                                    onPress={() => {
-                                        router.push({
-                                            pathname:
-                                                location.type === "business"
-                                                    ? "/showDetailBusiness"
-                                                    : "/showDetailPersonal",
-                                            params: {
-                                                productId: item.id,
-                                                locationId: location.id,
-                                            },
-                                        })
-                                    }}
-                                >
-                                    <Image
-                                        source={{
-                                            uri: item.product_templates?.image_url || 'https://via.placeholder.com/60',
+                        {nearlyExpired.length === 0 ? (
+                            <View style={styles.emptyBox}>
+                                <Text style={styles.emptyText}>
+                                    No products nearing expiration
+                                </Text>
+                            </View>
+                        ) : (
+                            nearlyExpired.map((item) => {
+                                const formatted = new Date(item.expiration_date)
+                                    .toLocaleDateString("en-GB", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                    })
+                                    .toUpperCase()
+
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={styles.cardNear}
+                                        activeOpacity={0.8}
+                                        onPress={() => {
+                                            router.push({
+                                                pathname:
+                                                    location.type === "business"
+                                                        ? "/showDetailBusiness"
+                                                        : "/showDetailPersonal",
+                                                params: {
+                                                    productId: item.id,
+                                                    locationId: location.id,
+                                                },
+                                            })
                                         }}
-                                        style={styles.productImg}
-                                    />
-                                    <Text style={styles.cardDateNear}>{formatted}</Text>
-                                </TouchableOpacity>
-                            )
-                        })}
+                                    >
+                                        <Image
+                                            source={{
+                                                uri:
+                                                    item.product_templates?.image_url ||
+                                                    "https://via.placeholder.com/60",
+                                            }}
+                                            style={styles.productImg}
+                                        />
+                                        <Text style={styles.cardDateNear}>{formatted}</Text>
+                                    </TouchableOpacity>
+                                )
+                            })
+                        )}
+
                     </ScrollView>
                 </View>
 
@@ -392,47 +404,57 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
 
                 <View style={styles.ExpiredBox}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {expired.map((item) => {
-                            const formatted = new Date(item.expiration_date)
-                                .toLocaleDateString("en-GB", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                })
-                                .toUpperCase()
 
-                            return (
-                                <TouchableOpacity
-                                    key={item.id}
-                                    style={styles.cardEx}
-                                    activeOpacity={0.8}
-                                    onPress={() => {
-                                        router.push({
-                                            pathname:
-                                                location.type === "business"
-                                                    ? "/showDetailBusiness"
-                                                    : "/showDetailPersonal",
-                                            params: {
-                                                productId: item.id,
-                                                locationId: location.id,
-                                            },
-                                        })
-                                    }}
-                                >
-                                    <Image
-                                        source={{
-                                            uri:
-                                                item.product_templates?.image_url ||
-                                                "https://via.placeholder.com/60",
+                        {expired.length === 0 ? (
+                            <View style={styles.emptyBox}>
+                                <Text style={styles.emptyText}>
+                                    No expired products
+                                </Text>
+                            </View>
+                        ) : (
+                            expired.map((item) => {
+                                const formatted = new Date(item.expiration_date)
+                                    .toLocaleDateString("en-GB", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                    })
+                                    .toUpperCase()
+
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={styles.cardEx}
+                                        activeOpacity={0.8}
+                                        onPress={() => {
+                                            router.push({
+                                                pathname:
+                                                    location.type === "business"
+                                                        ? "/showDetailBusiness"
+                                                        : "/showDetailPersonal",
+                                                params: {
+                                                    productId: item.id,
+                                                    locationId: location.id,
+                                                },
+                                            })
                                         }}
-                                        style={styles.productImg}
-                                    />
-                                    <Text style={styles.cardDateEx}>
-                                        {formatted}
-                                    </Text>
-                                </TouchableOpacity>
-                            )
-                        })}
+                                    >
+                                        <Image
+                                            source={{
+                                                uri:
+                                                    item.product_templates?.image_url ||
+                                                    "https://via.placeholder.com/60",
+                                            }}
+                                            style={styles.productImg}
+                                        />
+                                        <Text style={styles.cardDateEx}>
+                                            {formatted}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )
+                            })
+                        )}
+
                     </ScrollView>
                 </View>
                 {/* Storage */}
@@ -955,7 +977,7 @@ const styles = StyleSheet.create({
     },
     bottomNav: {
         position: "absolute",
-        bottom: 20,
+        bottom: 15,
         width: "100%",
         flexDirection: "row",
         justifyContent: "space-evenly",
@@ -1138,6 +1160,19 @@ const styles = StyleSheet.create({
         color: "#FF6EC7",
         marginTop: 50,
         marginBottom: 10,
-    }
+    },
+
+    emptyBox: {
+        width: 330,
+        height: 100,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    emptyText: {
+        color: "#999",
+        fontSize: 14,
+        fontWeight: "500",
+    },
 
 });
