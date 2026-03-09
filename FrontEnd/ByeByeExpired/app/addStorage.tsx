@@ -12,7 +12,9 @@ import {
   Alert,
   Image,
   ImageSourcePropType,
-  Dimensions
+  Dimensions,
+  Keyboard,
+  TouchableWithoutFeedback
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -148,23 +150,22 @@ export default function AddStorageScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.background}
-      >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#cbd1faff', '#eef4f8ff', '#cfe9f9ff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.background}
+        >
         <SafeAreaView style={styles.safeArea}>
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-              <Ionicons name="close" size={20} color="white" />
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Ionicons name="checkmark" size={20} color="white" />
               <Text style={styles.saveText}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -257,13 +258,14 @@ export default function AddStorageScreen() {
         </SafeAreaView>
       </LinearGradient>
     </View>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f093fb',
+    backgroundColor: '#eef4f8ff',
   },
   background: {
     flex: 1,
@@ -279,7 +281,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   cancelButton: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(150,150,150,0.2)',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 25,
@@ -287,29 +289,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(100,100,100,0.3)',
   },
   saveButton: {
-    backgroundColor: 'rgba(39, 174, 96, 0.9)',
+    backgroundColor: '#4CAF7C',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 25,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    shadowColor: '#27AE60',
+    shadowColor: '#4CAF7C',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 6,
   },
   cancelText: {
-    color: 'white',
+    color: '#333',
     fontSize: 15,
     fontWeight: '600',
   },
   saveText: {
-    color: 'white',
+    color: '#333',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -320,15 +322,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: 'white',
+    color: '#333',
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    color: '#666',
     marginTop: 5,
   },
   iconDisplayContainer: {
