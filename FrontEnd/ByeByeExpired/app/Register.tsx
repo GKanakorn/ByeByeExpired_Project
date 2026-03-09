@@ -47,7 +47,7 @@ const RegisterScreen = () => {
         {
           text: "OK",
           onPress: () =>
-            router.replace({
+            router.push({
               pathname: "/confirm-email",
               params: { email },
             }),
@@ -55,7 +55,16 @@ const RegisterScreen = () => {
       ]
     )
   } catch (err: any) {
-    Alert.alert("Register failed", err.message)
+    // ✅ ตรวจสอบว่าเป็น error เรื่อง email ซ้ำหรือไม่
+    const errorMessage = err.message?.toLowerCase() || ''
+    if (errorMessage.includes('already') || errorMessage.includes('exist') || errorMessage.includes('registered')) {
+      Alert.alert(
+        "Email Already Used",
+        "อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ"
+      )
+    } else {
+      Alert.alert("Register failed", err.message)
+    }
   }
 }
   const handleGoogleLogin = async () => {

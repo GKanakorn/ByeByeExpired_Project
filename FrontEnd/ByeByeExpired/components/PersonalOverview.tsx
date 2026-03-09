@@ -543,7 +543,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                     <View style={styles.bottomNav}>
                         <TouchableOpacity
                             onPress={() =>
-                                router.replace({
+                                router.push({
                                     pathname: "/allProduct",
                                     params: {
                                         locationId: location.id,
@@ -559,7 +559,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
 
                         <TouchableOpacity
                             onPress={() =>
-                                router.replace({
+                                router.push({
                                     pathname: "/NearlyExpired",
                                     params: {
                                         locationId: location.id,
@@ -575,7 +575,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
 
                         <TouchableOpacity
                             onPress={() =>
-                                router.replace({
+                                router.push({
                                     pathname: "/Expired",
                                     params: {
                                         locationId: location.id,
@@ -589,7 +589,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                             />
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => router.replace("/profile")}>
+                        <TouchableOpacity onPress={() => router.push("/profile")}>
                             <Image source={require("../assets/images/button4.png")}
                                 style={{ width: 22, height: 22 }}
                             />
@@ -618,7 +618,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                                 style={styles.minusBtn}
                                 onPress={() => {
                                     setShowPlusMinus(false)
-                                    router.replace({
+                                    router.push({
                                         pathname: '/scanBarcode',
                                         params: {
                                             mode: 'remove',
@@ -635,7 +635,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                                 style={styles.plusBtn}
                                 onPress={() => {
                                     setShowPlusMinus(false)
-                                    router.replace({
+                                    router.push({
                                         pathname: '/scanBarcode',
                                         params: {
                                             mode: 'add',
@@ -783,21 +783,6 @@ const styles = StyleSheet.create({
     sectionText: {
         marginLeft: 6,
         fontWeight: "600",
-    },
-    badge: {
-        backgroundColor: '#4CAF50',
-
-        width: 28,
-        height: 28,
-
-        borderRadius: 14,   // ต้อง = width/2
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    badgeText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 14,
     },
 
     /* Cards */

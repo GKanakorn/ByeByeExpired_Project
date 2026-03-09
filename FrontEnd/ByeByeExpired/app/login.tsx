@@ -30,7 +30,27 @@ export default function LoginScreen() {
 
       router.replace('/overview')
     } catch (err: any) {
-      Alert.alert('Login failed', err.message)
+      // ✅ ตรวจสอบว่าเป็น error เรื่อง email ยังไม่ได้ confirm หรือไม่
+      const errorMessage = err.message?.toLowerCase() || ''
+      if (errorMessage.includes('email not confirmed') || errorMessage.includes('confirm') || errorMessage.includes('verify')) {
+        Alert.alert(
+          'Email Not Confirmed',
+          'กรุณายืนยันอีเมลของคุณก่อนเข้าสู่ระบบ',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.push({
+                  pathname: '/confirm-email',
+                  params: { email },
+                })
+              },
+            },
+          ]
+        )
+      } else {
+        Alert.alert('Login failed', err.message)
+      }
     }
   }
 

@@ -264,7 +264,7 @@ export default function AddProductScreen() {
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
-    router.replace('/overview')
+    router.push('/overview')
   }
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -374,7 +374,7 @@ export default function AddProductScreen() {
       })
 
       Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
-      router.replace('/overview')
+      router.push('/overview')
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Save failed')
     } finally {
