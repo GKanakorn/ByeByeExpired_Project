@@ -21,13 +21,12 @@ import 'react-native-gesture-handler'
 import { Swipeable } from 'react-native-gesture-handler'
 import { RectButton } from 'react-native-gesture-handler'
 import { Alert } from 'react-native'
-import { permissions } from "../src/utils/permissions"
 
 type Location = {
   id: string
   name: string
   type: "personal" | "business"
-  role: "owner" | "admin" | "member"
+  role: "owner" | "member"
 }
 
 export default function BusinessOverview({ location, notificationCount = 0 }: { location: Location, notificationCount?: number }) {
@@ -41,9 +40,11 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
   const [allProducts, setAllProducts] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [openedStorageId, setOpenedStorageId] = useState<string | null>(null)
-  const role = location.role
-  const canManageProduct = permissions.canManageProduct(role)
-  const canManageStorage = permissions.canManageStorage(role)
+  const normalizedRole: "owner" | "member" =
+    location.role === "owner" ? "owner" : "member"
+  const canManageProduct = normalizedRole === "owner" || normalizedRole === "member"
+  const canManageStorage = normalizedRole === "owner"
+  const canAccessBusinessTools = normalizedRole === "owner"
 
   const goToStorage = (storageId: string) => {
     if (!storageId || !location?.id) return
@@ -79,7 +80,55 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
       setLoadingStorages(false)
     }
   }
+  const executeDeleteStorage = async (storageId: string, targetStorageId?: string) => {
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      if (!token) return
+
+      await deleteStorage(token, storageId, targetStorageId)
+      await fetchAllData()
+    } catch (error) {
+      console.log("DELETE STORAGE ERROR:", error)
+      Alert.alert('Error', 'Failed to delete storage')
+    }
+  }
+
   const handleDeleteStorage = async (storageId: string) => {
+    const sourceStorage = storages.find((s) => s.id === storageId)
+    const sourceName = sourceStorage?.name || 'this storage'
+    const itemCount = Number(sourceStorage?.item_count || 0)
+
+    if (itemCount > 0) {
+      const existingNoStorage = storages.find(
+        (s) => s.id !== storageId && (s.name || '').toLowerCase() === 'no storage'
+      )
+      const noStorageTargetId = existingNoStorage?.id ?? '__NO_STORAGE__'
+
+      const moveTargets = storages.filter(
+        (s) => s.id !== storageId && (s.name || '').toLowerCase() !== 'no storage'
+      )
+
+      const moveButtons = [
+        {
+          text: 'No Storage',
+          onPress: () => executeDeleteStorage(storageId, noStorageTargetId),
+        },
+        ...moveTargets.map((target) => ({
+          text: target.name,
+          onPress: () => executeDeleteStorage(storageId, target.id),
+        })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ]
+
+      Alert.alert(
+        'Move products before delete',
+        `${sourceName} has ${itemCount} product(s). Select target storage to move products to:`,
+        moveButtons
+      )
+      return
+    }
+
     Alert.alert(
       'Delete Storage',
       'Are you sure you want to delete this storage?',
@@ -88,22 +137,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              const { data: session } = await supabase.auth.getSession()
-              const token = session?.session?.access_token
-              if (!token) return
-
-              // ✅ เรียก API ลบจริง
-              await deleteStorage(token, storageId)
-
-              // ✅ โหลดใหม่หลังลบ
-              await fetchAllData()
-
-            } catch (error) {
-              console.log("DELETE STORAGE ERROR:", error)
-            }
-          }
+          onPress: () => executeDeleteStorage(storageId)
         }
       ]
     )
@@ -201,10 +235,10 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
           {/* ขวา */}
           <View style={styles.rightIcons}>
             <TouchableOpacity
-              style={[styles.iconBtn, !canManageProduct && { opacity: 0.45 }]}
-              disabled={!canManageProduct}
+              style={[styles.iconBtn, !canAccessBusinessTools && { opacity: 0.45 }]}
+              disabled={!canAccessBusinessTools}
               onPress={() => {
-                if (!canManageProduct) {
+                if (!canAccessBusinessTools) {
                   Alert.alert('Permission denied', 'You do not have permission to access this feature')
                   return
                 }
@@ -215,10 +249,10 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.iconBtn, !canManageProduct && { opacity: 0.45 }]}
-              disabled={!canManageProduct}
+              style={[styles.iconBtn, !canAccessBusinessTools && { opacity: 0.45 }]}
+              disabled={!canAccessBusinessTools}
               onPress={() => {
-                if (!canManageProduct) {
+                if (!canAccessBusinessTools) {
                   Alert.alert('Permission denied', 'You do not have permission to access this feature')
                   return
                 }

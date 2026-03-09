@@ -1,12 +1,18 @@
-export type Role = "owner" | "admin" | "member"
+export type Role = "owner" | "member"
+type RoleInput = Role | "admin"
+
+const normalizeRole = (role: RoleInput): Role =>
+  role === "owner" ? "owner" : "member"
 
 export const permissions = {
-  canManageProduct: (role: Role) =>
-    role === "owner" || role === "admin",
+  canManageProduct: (role: RoleInput) => {
+    const normalizedRole = normalizeRole(role)
+    return normalizedRole === "owner" || normalizedRole === "member"
+  },
 
-  canManageMembers: (role: Role) =>
-    role === "owner",
+  canManageMembers: (role: RoleInput) =>
+    normalizeRole(role) === "owner",
 
-  canManageStorage: (role: Role) =>
-    role === "owner" || role === "admin",
+  canManageStorage: (role: RoleInput) =>
+    normalizeRole(role) === "owner",
 }

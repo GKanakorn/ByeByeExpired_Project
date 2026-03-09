@@ -60,6 +60,17 @@ export async function deleteLocation(userId: string, locationId: string) {
     throw new Error('Only owner can delete this location')
   }
 
+  const { count: productCount, error: productCountError } = await supabaseAdmin
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('location_id', locationId)
+
+  if (productCountError) throw productCountError
+
+  if ((productCount ?? 0) > 0) {
+    throw new Error('This location still has products. Please delete all products first before deleting the location.')
+  }
+
   // ลบ location อย่างเดียว
   const { error } = await supabaseAdmin
     .from('locations')

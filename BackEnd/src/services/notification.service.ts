@@ -20,25 +20,60 @@ export interface LocationNotifications {
 }
 
 export async function getUserNotifications(userId: string): Promise<LocationNotifications[]> {
-  // 1️⃣ Get all locations for the user
-  const { data: locations, error: locError } = await supabaseAdmin
+  // 1️⃣ Get owned locations
+  const { data: ownedLocations, error: ownedLocError } = await supabaseAdmin
     .from('locations')
     .select('id, name, type')
     .eq('owner_id', userId)
 
-  if (locError) throw locError
-  if (!locations || locations.length === 0) return []
+  if (ownedLocError) throw ownedLocError
+
+  // 2️⃣ Get locations where user is a member
+  const { data: membershipRows, error: membershipError } = await supabaseAdmin
+    .from('location_members')
+    .select('location_id')
+    .eq('user_id', userId)
+
+  if (membershipError) throw membershipError
+
+  const memberLocationIds = (membershipRows ?? []).map((row: any) => row.location_id)
+
+  let memberLocations: Array<{ id: string; name: string; type: 'personal' | 'business' }> = []
+
+  if (memberLocationIds.length > 0) {
+    const { data, error } = await supabaseAdmin
+      .from('locations')
+      .select('id, name, type')
+      .in('id', memberLocationIds)
+
+    if (error) throw error
+    memberLocations = (data ?? []) as Array<{ id: string; name: string; type: 'personal' | 'business' }>
+  }
+
+  const locationMap = new Map<string, { id: string; name: string; type: 'personal' | 'business' }>()
+
+  for (const location of ownedLocations ?? []) {
+    locationMap.set(location.id, location as { id: string; name: string; type: 'personal' | 'business' })
+  }
+
+  for (const location of memberLocations) {
+    locationMap.set(location.id, location)
+  }
+
+  const locations = Array.from(locationMap.values())
+
+  if (locations.length === 0) return []
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   const result: LocationNotifications[] = []
 
-  // 2️⃣ For each location, find notifications
+  // 3️⃣ For each location, find notifications
   for (const location of locations) {
     const notifications: NotificationItem[] = []
 
-    // 3️⃣ Get all products for this location
+    // 4️⃣ Get all products for this location
     const { data: products, error: prodError } = await supabaseAdmin
       .from('products')
       .select(`
@@ -60,7 +95,7 @@ export async function getUserNotifications(userId: string): Promise<LocationNoti
     if (prodError) throw prodError
     if (!products) continue
 
-    // 4️⃣ Check each product for notifications
+    // 5️⃣ Check each product for notifications
     for (const product of products) {
       const template = product.product_templates as
         | { image_url: string | null }
@@ -121,7 +156,7 @@ export async function getUserNotifications(userId: string): Promise<LocationNoti
       }
     }
 
-    // 5️⃣ Only add location if it has notifications
+    // 6️⃣ Only add location if it has notifications
     if (notifications.length > 0) {
       result.push({
         locationId: location.id,

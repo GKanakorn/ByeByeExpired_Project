@@ -18,7 +18,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { supabase } from '../src/supabase'
 import { getMyLocations, deleteLocation, Location } from '../src/api/location.api'
 import { useLocation } from '../src/context/LocationContext'
-import { getUserNotifications, LocationNotifications } from '../src/api/notification.api'
+import { getUserNotifications, LocationNotifications, NotificationItem } from '../src/api/notification.api'
 
 
 export default function SettingScreen() {
@@ -62,6 +62,31 @@ export default function SettingScreen() {
             setLoadingNotifications(false)
         }
     };
+
+    const mergeNotifications = (items: NotificationItem[]) => {
+        const merged = new Map<string, NotificationItem & { alerts: Array<{ type: 'expiring' | 'low_stock'; daysUntilExpiry?: number }> }>()
+
+        for (const item of items) {
+            if (!merged.has(item.id)) {
+                merged.set(item.id, {
+                    ...item,
+                    alerts: [{ type: item.type, daysUntilExpiry: item.daysUntilExpiry }],
+                })
+                continue
+            }
+
+            const existing = merged.get(item.id)!
+            if (!existing.alerts.some((alert) => alert.type === item.type)) {
+                existing.alerts.push({ type: item.type, daysUntilExpiry: item.daysUntilExpiry })
+            }
+
+            if (item.imageUrl) existing.imageUrl = item.imageUrl
+            existing.quantity = Math.min(existing.quantity, item.quantity)
+            if (item.daysUntilExpiry !== undefined) existing.daysUntilExpiry = item.daysUntilExpiry
+        }
+
+        return Array.from(merged.values())
+    }
 
     useFocusEffect(
         React.useCallback(() => {
@@ -175,8 +200,8 @@ export default function SettingScreen() {
                                                                 if (selectedLocationId === item.id) {
                                                                     setSelectedLocationId(null)
                                                                 }
-                                                            } catch (e) {
-                                                                Alert.alert('Error', 'Unable to delete location')
+                                                            } catch (e: any) {
+                                                                Alert.alert('Delete location failed', e?.message || 'Unable to delete location')
                                                             } finally {
                                                                 setDeletingId(null)
                                                             }
@@ -258,10 +283,18 @@ export default function SettingScreen() {
                 >
                     {notifications.length > 0 && (
                         <View style={styles.notificationsSection}>
-                            {notifications.map((location) => (
+                            {notifications.map((location) => {
+                                const mergedItems = mergeNotifications(location.notifications || [])
+
+                                return (
                                 <View key={location.locationId} style={styles.locationNotifications}>
-                                    <Text style={styles.locationName}>{location.locationName}</Text>
-                                    {location.notifications?.map((notif, idx) => (
+                                    <View style={styles.locationHeader}>
+                                        <Text style={styles.locationName}>{location.locationName}</Text>
+                                        <View style={styles.locationCountBadge}>
+                                            <Text style={styles.locationCountText}>{mergedItems.length}</Text>
+                                        </View>
+                                    </View>
+                                    {mergedItems.map((notif, idx) => (
                                         <View key={idx} style={styles.notificationItem}>
                                             <View style={styles.notificationContent}>
                                                 {notif.imageUrl && (
@@ -273,16 +306,18 @@ export default function SettingScreen() {
                                                 <View style={{ flex: 1 }}>
                                                     <Text style={styles.notifName} numberOfLines={1}>{notif.name}</Text>
                                                     <Text style={styles.notifType}>
-                                                        {notif.type === 'expiring' ? '🕐 Expiring Soon' : '📉 Out of Stock'}
+                                                        {notif.alerts.map((alert) =>
+                                                            alert.type === 'expiring' ? '🕐 Expiring Soon' : '📉 Out of Stock'
+                                                        ).join(' • ')}
                                                     </Text>
-                                                    {notif.type === 'expiring' && (
+                                                    {notif.alerts.some((alert) => alert.type === 'expiring') && (
                                                         <Text style={styles.notifDate}>
                                                             {notif.daysUntilExpiry === 0 
                                                                 ? 'Expires today!' 
                                                                 : `Expires in ${notif.daysUntilExpiry} day(s)`}
                                                         </Text>
                                                     )}
-                                                    {notif.type === 'low_stock' && (
+                                                    {notif.alerts.some((alert) => alert.type === 'low_stock') && (
                                                         <Text style={styles.notifDate}>Only {notif.quantity} left</Text>
                                                     )}
                                                 </View>
@@ -290,7 +325,8 @@ export default function SettingScreen() {
                                         </View>
                                     ))}
                                 </View>
-                            ))}
+                                )
+                            })}
                         </View>
                     )}
                 </ScrollView>
@@ -518,14 +554,33 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 3,
     },
-    locationName: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#5A6AE0',
+    locationHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: 8,
         paddingBottom: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#EEE',
+    },
+    locationName: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#5A6AE0',
+    },
+    locationCountBadge: {
+        minWidth: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#5A6AE0',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 8,
+    },
+    locationCountText: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: '700',
     },
     notificationItem: {
         paddingVertical: 8,

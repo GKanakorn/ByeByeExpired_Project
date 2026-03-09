@@ -60,7 +60,8 @@ export async function getStoragesByLocation(
 
 export const deleteStorage = async (
   token: string,
-  storageId: string
+  storageId: string,
+  targetStorageId?: string
 ) => {
   const response = await fetch(
     `${API_URL}/api/storages/${storageId}`,
@@ -70,6 +71,7 @@ export const deleteStorage = async (
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({ targetStorageId }),
     }
   )
 

@@ -4,7 +4,7 @@ import { useLocation } from "../src/context/LocationContext"
 import PersonalOverview from "../components/PersonalOverview"
 import BusinessOverview from "../components/BusinessOverview"
 import NotificationOverlay from "../components/NotificationOverlay"
-import { getUserNotifications } from "../src/api/notification.api"
+import { getUserNotifications, NotificationItem } from "../src/api/notification.api"
 import { supabase } from "../src/supabase"
 
 export default function OverviewScreen() {
@@ -13,6 +13,30 @@ export default function OverviewScreen() {
   const hasShownNotificationRef = useRef(false)
   const [notificationCount, setNotificationCount] = useState(0)
   const [notifications, setNotifications] = useState<any[]>([])
+
+  const mergeNotifications = (items: NotificationItem[]) => {
+    const merged = new Map<string, NotificationItem & { alerts: Array<{ type: 'expiring' | 'low_stock'; daysUntilExpiry?: number }> }>()
+
+    items.forEach(item => {
+      const existing = merged.get(item.id)
+      if (existing) {
+        existing.alerts.push({
+          type: item.type,
+          daysUntilExpiry: item.daysUntilExpiry,
+        })
+      } else {
+        merged.set(item.id, {
+          ...item,
+          alerts: [{
+            type: item.type,
+            daysUntilExpiry: item.daysUntilExpiry,
+          }],
+        })
+      }
+    })
+
+    return Array.from(merged.values())
+  }
 
   useEffect(() => {
     // รีเซ็ต flag เมื่อ logout (currentLocation เป็น null)
@@ -34,11 +58,11 @@ export default function OverviewScreen() {
         const data = await getUserNotifications(token)
         setNotifications(data)
 
-        // Calculate total notification count
+        // Calculate total merged notification count (same logic as NotificationOverlay)
         let totalCount = 0
         data.forEach((location: any) => {
           if (location.notifications && Array.isArray(location.notifications)) {
-            totalCount += location.notifications.length
+            totalCount += mergeNotifications(location.notifications).length
           }
         })
         setNotificationCount(totalCount)

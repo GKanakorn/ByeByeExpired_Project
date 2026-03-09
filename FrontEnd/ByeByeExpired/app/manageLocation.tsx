@@ -17,7 +17,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import {
     getManageLocation,
-    updateMemberRole,
     deleteMember,
     inviteMemberToLocation,
 } from "../src/api/manageLocation.api";
@@ -28,7 +27,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type Member = {
     id: string;
     email: string;
-    role: "owner" | "admin" | "member";
+    role: "owner" | "member";
 };
 
 export default function ManageLocationScreen() {
@@ -89,28 +88,6 @@ export default function ManageLocationScreen() {
     };
 
     const isOwner = currentUserId === ownerId;
-
-    const changeRole = async (memberId: string, newRole: Member["role"]) => {
-        try {
-            setUpdatingId(memberId);
-
-            const { data: session } = await supabase.auth.getSession();
-            const token = session?.session?.access_token;
-            if (!token) return;
-
-            await updateMemberRole(token, locationId, memberId, newRole);
-
-            setMembers((prev) =>
-                prev.map((m) =>
-                    m.id === memberId ? { ...m, role: newRole } : m
-                )
-            );
-        } catch {
-            Alert.alert("Error", "Failed to change role");
-        } finally {
-            setUpdatingId(null);
-        }
-    };
 
     const removeMember = async (memberId: string) => {
         Alert.alert("Confirm", "Do you want to remove this member?", [
@@ -174,7 +151,6 @@ export default function ManageLocationScreen() {
     const renderRoleBadge = (role: Member["role"]) => {
         const map = {
             owner: { bg: "#FFC107", label: "Owner" },
-            admin: { bg: "#6C63FF", label: "Admin" },
             member: { bg: "#00B894", label: "Member" },
         };
 
@@ -197,47 +173,7 @@ export default function ManageLocationScreen() {
                             <Text style={{ marginLeft: 6 }}>👑</Text>
                         )}
                     </View>
-                    {isOwner && item.id !== ownerId ? (
-                        <TouchableOpacity
-                            onPress={() => {
-                                const newRole = item.role === "admin" ? "member" : "admin";
-
-                                Alert.alert(
-                                    "Confirm Role Change",
-                                    `Change role to ${newRole.toUpperCase()} for ${item.email}?`,
-                                    [
-                                        { text: "Cancel", style: "cancel" },
-                                        {
-                                            text: "Confirm",
-                                            onPress: () => changeRole(item.id, newRole),
-                                        },
-                                    ]
-                                );
-                            }}
-                            style={[
-                                styles.roleBadge,
-                                item.role === "admin"
-                                    ? { backgroundColor: "#6C63FF" }
-                                    : { backgroundColor: "#00B894" },
-                            ]}
-                        >
-                            <View style={{ flexDirection: "row", alignItems: "center" }}>
-                                <Text style={styles.roleText}>
-                                    {item.role === "admin" ? "Admin" : "Member"}
-                                </Text>
-                                {canEdit && (
-                                    <Ionicons
-                                        name="swap-horizontal"
-                                        size={12}
-                                        color="#FFF"
-                                        style={{ marginLeft: 4 }}
-                                    />
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                    ) : (
-                        renderRoleBadge(item.role)
-                    )}
+                    {renderRoleBadge(item.role)}
                 </View>
 
                 {canEdit && (
@@ -329,27 +265,10 @@ export default function ManageLocationScreen() {
                             />
 
                             <Text style={{ fontWeight: "600", marginBottom: 8 }}>
-                                Select Role
+                                Role
                             </Text>
 
                             <View style={styles.roleButtonRow}>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.roleButton,
-                                        inviteRole === "admin" && styles.roleButtonActive,
-                                    ]}
-                                    onPress={() => setInviteRole("admin")}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.roleButtonText,
-                                            inviteRole === "admin" && styles.roleButtonTextActive,
-                                        ]}
-                                    >
-                                        ADMIN
-                                    </Text>
-                                </TouchableOpacity>
-
                                 <TouchableOpacity
                                     style={[
                                         styles.roleButton,

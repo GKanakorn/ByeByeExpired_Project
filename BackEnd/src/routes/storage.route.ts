@@ -12,7 +12,7 @@ const router = Router()
 router.post(
   '/locations/:locationId/storages',
   requireAuth,
-  requireLocationRole(['admin', 'owner']),
+  requireLocationRole(['owner']),
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.params.locationId as string
@@ -66,12 +66,14 @@ router.get(
 router.delete(
   '/storages/:storageId',
   requireAuth,
+  requireLocationRole(['owner']),
   async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user!.id
       const storageId = req.params.storageId as string
+      const targetStorageId = req.body?.targetStorageId as string | undefined
 
-      const result = await deleteStorage(userId, storageId)
+      const result = await deleteStorage(userId, storageId, targetStorageId)
       res.json(result)
     } catch (err: any) {
       console.error('DELETE STORAGE ERROR FULL:', err)
@@ -90,6 +92,7 @@ router.delete(
 router.put(
   '/storages/:storageId',
   requireAuth,
+  requireLocationRole(['owner']),
   async (req: AuthRequest, res: Response) => {
     try {
       const storageId = req.params.storageId as string
@@ -118,6 +121,7 @@ router.put(
 router.get(
   '/storages/:storageId',
   requireAuth,
+  requireLocationRole(['owner', 'member']),
   async (req: AuthRequest, res: Response) => {
     try {
       const storageId = req.params.storageId as string

@@ -30,7 +30,7 @@ async function getLocationOwnerId(locationId: string) {
 async function resolveOwnerForAccessibleLocation(
   userId: string,
   locationId: string,
-  allowedRoles: Array<'owner' | 'admin' | 'member'> = ['owner', 'admin']
+  allowedRoles: Array<'owner' | 'member' | 'admin'> = ['owner']
 ) {
   const ownerId = await getLocationOwnerId(locationId)
 
@@ -49,7 +49,14 @@ async function resolveOwnerForAccessibleLocation(
     throw new Error('Not a member')
   }
 
-  if (!allowedRoles.includes(member.role as 'owner' | 'admin' | 'member')) {
+  const normalizedRole =
+    member.role === 'owner' ? 'owner' : 'member'
+
+  const hasPermission =
+    (normalizedRole === 'owner' && allowedRoles.includes('owner')) ||
+    (normalizedRole === 'member' && allowedRoles.includes('member'))
+
+  if (!hasPermission) {
     throw new Error('Insufficient permission')
   }
 
@@ -62,7 +69,7 @@ async function resolveOwnerForAccessibleLocation(
 router.post(
   "/",
   requireAuth,
-  requireLocationRole(["owner", "admin"]),
+  requireLocationRole(["owner"]),
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.body.locationId || req.body.location_id
@@ -117,7 +124,7 @@ router.get(
         supplierOwnerId = await resolveOwnerForAccessibleLocation(
           req.user!.id,
           locationId,
-          ['owner', 'admin']
+          ['owner', 'member']
         )
       }
 
@@ -137,7 +144,7 @@ router.get(
 router.get(
   "/:id",
   requireAuth,
-  requireLocationRole(["owner", "admin"]),
+  requireLocationRole(["owner"]),
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.query.locationId as string | undefined
@@ -164,7 +171,7 @@ router.get(
 router.put(
   "/:id",
   requireAuth,
-  requireLocationRole(["owner", "admin"]),
+  requireLocationRole(["owner"]),
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.body.locationId || req.query.locationId
@@ -209,7 +216,7 @@ router.put(
 router.delete(
   "/:id",
   requireAuth,
-  requireLocationRole(["owner", "admin"]),
+  requireLocationRole(["owner"]),
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.query.locationId as string | undefined
