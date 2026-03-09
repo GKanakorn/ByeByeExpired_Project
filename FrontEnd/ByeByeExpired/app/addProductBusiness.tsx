@@ -549,7 +549,7 @@ export default function AddProductScreen() {
                 style={{ width: 120, height: 120, borderRadius: 8 }}
               />
             ) : (
-              <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
+              <Text style={{ color: '#999', textAlign: 'center' }}>Tap to select image</Text>
             )}
           </TouchableOpacity>
         </View>

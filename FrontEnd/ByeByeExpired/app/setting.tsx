@@ -98,10 +98,10 @@ export default function SettingScreen() {
                     <Text style={styles.title}>
                         {selectedLocationId
                             ? locations.find(l => l.id === selectedLocationId)?.name
-                            : "เลือกสถานที่"}
+                            : "Select Location"}
                     </Text>
                     <Text style={styles.subtitle}>
-                        จัดการสินค้าและวันหมดอายุแยกตามสถานที่
+                        Manage products and expiration dates by location
                     </Text>
                 </View>
 
@@ -132,7 +132,7 @@ export default function SettingScreen() {
                                         onPress={() => navigation.navigate("addLocation" as never)}
                                     >
                                         <Ionicons name="add-circle-outline" size={48} color="#000" />
-                                        <Text style={styles.addText}>เพิ่มสถานที่ใหม่</Text>
+                                        <Text style={styles.addText}>Add New Location</Text>
                                     </TouchableOpacity>
                                 );
                             }
@@ -155,12 +155,12 @@ export default function SettingScreen() {
                                         style={styles.closeBtn}
                                         onPress={() => {
                                             Alert.alert(
-                                                'ยืนยันการลบ',
-                                                'แน่ใจนะว่าจะลบสถานที่นี้?',
+                                                'Confirm Deletion',
+                                                'Are you sure you want to delete this location?',
                                                 [
-                                                    { text: 'ยกเลิก', style: 'cancel' },
+                                                    { text: 'Cancel', style: 'cancel' },
                                                     {
-                                                        text: 'ลบ',
+                                                        text: 'Delete',
                                                         style: 'destructive',
                                                         onPress: async () => {
                                                             try {
@@ -176,7 +176,7 @@ export default function SettingScreen() {
                                                                     setSelectedLocationId(null)
                                                                 }
                                                             } catch (e) {
-                                                                Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถลบสถานที่ได้')
+                                                                Alert.alert('Error', 'Unable to delete location')
                                                             } finally {
                                                                 setDeletingId(null)
                                                             }
@@ -213,7 +213,7 @@ export default function SettingScreen() {
                                     </Text>
 
                                     <Text style={styles.cardSub}>
-                                        ประเภท: {isPersonal ? "ส่วนตัว" : "ธุรกิจ"}
+                                        Type: {isPersonal ? "Personal" : "Business"}
                                     </Text>
 
                                     <TouchableOpacity
@@ -228,7 +228,7 @@ export default function SettingScreen() {
                                             navigation.goBack()
                                         }}
                                     >
-                                        <Text style={styles.enterText}>เข้าใช้งาน</Text>
+                                        <Text style={styles.enterText}>Enter</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         style={styles.manageBtn}
@@ -236,7 +236,7 @@ export default function SettingScreen() {
                                             (navigation.navigate as any)("manageLocation", { locationId: item.id });
                                         }}
                                     >
-                                        <Text style={styles.manageText}>จัดการผู้ใช้</Text>
+                                        <Text style={styles.manageText}>Manage Users</Text>
                                     </TouchableOpacity>
                                 </View>
                             );
@@ -247,7 +247,7 @@ export default function SettingScreen() {
                 {/* Notifications Title - Fixed */}
                 {notifications.length > 0 && (
                     <View style={styles.notificationsTitleContainer}>
-                        <Text style={styles.notificationsTitle}>📬 การแจ้งเตือน</Text>
+                        <Text style={styles.notificationsTitle}>📬 Notifications</Text>
                     </View>
                 )}
 
@@ -273,17 +273,17 @@ export default function SettingScreen() {
                                                 <View style={{ flex: 1 }}>
                                                     <Text style={styles.notifName} numberOfLines={1}>{notif.name}</Text>
                                                     <Text style={styles.notifType}>
-                                                        {notif.type === 'expiring' ? '🕐 เร็ว ๆ หมดอายุ' : '📉 สินค้าหมด'}
+                                                        {notif.type === 'expiring' ? '🕐 Expiring Soon' : '📉 Out of Stock'}
                                                     </Text>
                                                     {notif.type === 'expiring' && (
                                                         <Text style={styles.notifDate}>
                                                             {notif.daysUntilExpiry === 0 
-                                                                ? 'จะหมดอายุภายในวันนี้!' 
-                                                                : `เหลือ ${notif.daysUntilExpiry} วัน`}
+                                                                ? 'Expires today!' 
+                                                                : `Expires in ${notif.daysUntilExpiry} day(s)`}
                                                         </Text>
                                                     )}
                                                     {notif.type === 'low_stock' && (
-                                                        <Text style={styles.notifDate}>เหลือ {notif.quantity} ชิ้น</Text>
+                                                        <Text style={styles.notifDate}>Only {notif.quantity} left</Text>
                                                     )}
                                                 </View>
                                             </View>

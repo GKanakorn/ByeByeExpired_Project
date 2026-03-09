@@ -116,14 +116,14 @@ export default function NotificationOverlay({ visible, onClose }: NotificationOv
           {/* Info */}
           <View style={styles.infoContainer}>
             <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.quantityText}>จำนวน: {item.quantity} ชิ้น</Text>
+            <Text style={styles.quantityText}>Quantity: {item.quantity} piece(s)</Text>
             
             {/* แสดง alerts ทั้งหมด */}
             {item.alerts.map((alert, idx) => {
               if (alert.type === 'expiring') {
                 const message = alert.daysUntilExpiry === 0 
-                  ? 'จะหมดอายุภายในวันนี้!' 
-                  : `จะหมดอายุภายใน ${alert.daysUntilExpiry} วัน`
+                  ? 'Expires today!' 
+                  : `Expires in ${alert.daysUntilExpiry} day(s)`
                 
                 return (
                   <View key={`alert-${idx}`} style={[styles.alertBox, styles.expiringAlertBox]}>
@@ -133,8 +133,8 @@ export default function NotificationOverlay({ visible, onClose }: NotificationOv
                 )
               } else {
                 const message = item.quantity === 0 
-                  ? 'สินค้าหมด!!' 
-                  : `เหลือเพียง ${item.quantity} ชิ้น - รีบสต๊อก!`
+                  ? 'Out of stock!' 
+                  : `Only ${item.quantity} left - Restock now!`
                 
                 return (
                   <View key={`alert-${idx}`} style={[styles.alertBox, styles.lowStockAlertBox]}>
@@ -191,7 +191,7 @@ export default function NotificationOverlay({ visible, onClose }: NotificationOv
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Ionicons name="notifications" size={22} color="#F19BEA" />
-              <Text style={styles.headerTitle}>การแจ้งเตือน</Text>
+              <Text style={styles.headerTitle}>Notifications</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close-circle" size={28} color="#999" />
@@ -202,13 +202,13 @@ export default function NotificationOverlay({ visible, onClose }: NotificationOv
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#F19BEA" />
-              <Text style={styles.loadingText}>กำลังโหลดการแจ้งเตือน...</Text>
+              <Text style={styles.loadingText}>Loading notifications...</Text>
             </View>
           ) : notifications.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="checkmark-circle-outline" size={60} color="#10B981" />
-              <Text style={styles.emptyTitle}>ไม่มีการแจ้งเตือน</Text>
-              <Text style={styles.emptySubtitle}>ทุกอย่างเป็นไปด้วยดี!</Text>
+              <Text style={styles.emptyTitle}>No Notifications</Text>
+              <Text style={styles.emptySubtitle}>Everything looks good!</Text>
             </View>
           ) : (
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -218,7 +218,7 @@ export default function NotificationOverlay({ visible, onClose }: NotificationOv
 
           {/* Footer Button */}
           <TouchableOpacity style={styles.okButton} onPress={onClose}>
-            <Text style={styles.okButtonText}>เข้าใจแล้ว</Text>
+            <Text style={styles.okButtonText}>Got it</Text>
           </TouchableOpacity>
         </View>
       </View>

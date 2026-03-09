@@ -395,12 +395,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: FONT_WEIGHT_SEMIBOLD,
     fontFamily: FONT_FAMILY,
-    textAlign: "center",
   },
   qty: {
     fontSize: 11,
     color: "#777",
-    textAlign: "center",
     fontFamily: FONT_FAMILY,
     fontWeight: FONT_WEIGHT_REGULAR,
   },
@@ -410,7 +408,6 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT_SEMIBOLD,
     fontFamily: FONT_FAMILY,
     marginTop: 2,
-    textAlign: "center",
   },
   productWrapper: {
     flex: 12,

@@ -132,7 +132,7 @@ export default function ShowDetailPersonal() {
 
     setQuantity(newQty.toString())
 
-    showToast('ลบสินค้าเรียบร้อย')
+    showToast('Product deleted successfully')
   } catch (err) {
     console.log(err)
     Alert.alert('Error', 'Delete failed')
@@ -216,7 +216,7 @@ export default function ShowDetailPersonal() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'ต้องอนุญาตเข้าถึงรูป')
+      Alert.alert('Permission required', 'Photo access permission required')
       return
     }
 
@@ -278,7 +278,7 @@ export default function ShowDetailPersonal() {
       const quantityNumber = Number(quantity)
 
       if (!quantityNumber || quantityNumber <= 0) {
-        Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
+        Alert.alert('Error', 'Quantity must be greater than 0')
         setUploading(false)
         return
       }
@@ -306,12 +306,12 @@ export default function ShowDetailPersonal() {
         notifyBeforeDays: notifyEnabled ? Number(notifyDays) : null,
       }
       if (!productId) {
-        Alert.alert('Error', 'ไม่พบ productId')
+        Alert.alert('Error', 'Product ID not found')
         return
       }
 
       await updateProduct(productId as string, payload)
-      Alert.alert('Success', 'แก้ไขสินค้าเรียบร้อย 🎉')
+      Alert.alert('Success', 'Product updated successfully 🎉')
       router.back()
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Save failed')
@@ -457,7 +457,7 @@ export default function ShowDetailPersonal() {
                   style={{ width: 120, height: 120, borderRadius: 8 }}
                 />
               ) : (
-                <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
+                <Text style={{ color: '#999' }}>Tap to select image</Text>
               )}
             </TouchableOpacity>
           ) : (
@@ -577,12 +577,12 @@ export default function ShowDetailPersonal() {
                 placeholder="Enter days before expiration"
               />
             ) : (
-              <>
+              <View>
                 <Text style={styles.label}>Days before expiration</Text>
                 <View style={styles.readOnlyInfo}>
                   <Text style={styles.readOnlyValue}>{notifyDays || '-'}</Text>
                 </View>
-              </>
+              </View>
             )
           )}
         </View>
@@ -600,40 +600,35 @@ export default function ShowDetailPersonal() {
             </TouchableOpacity>
           )}
 
+        </ScrollView>
+
         {/* delete quantity modal */}
         <Modal visible={showDeleteQtyModal} transparent animationType="slide">
           <BlurView intensity={40} tint="dark" style={styles.bottomOverlay}>
             <View style={styles.modalBox}>
-            {/* drag handle */}
-            <View style={styles.modalHandle} />
-            
-            <Text style={styles.modalTitle}>ลบสินค้าออกจากสต๊อก</Text>
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>Remove Product from Stock</Text>
+              <View style={styles.sectionDivider} />
 
-            {/* ขีดแบ่ง */}
-            <View style={styles.sectionDivider} />
-
-            <View style={styles.productRow}>
-              <Image
-                source={{ uri: image || 'https://via.placeholder.com/100' }}
-                style={styles.modalImage}
-              />
-
-              <View style={{ marginLeft: 20 }}>
-                <Text style={styles.name}>{name}</Text>
-                <Text style={styles.detail}>{quantity} piece</Text>
-                <Text style={styles.exp}>
-                  EXP : {expireDate.toLocaleDateString('en-GB')}
-                </Text>
+              <View style={styles.productRow}>
+                <Image
+                  source={{ uri: image || 'https://via.placeholder.com/100' }}
+                  style={styles.modalImage}
+                />
+                <View style={{ marginLeft: 20 }}>
+                  <Text style={styles.name}>{name}</Text>
+                  <Text style={styles.detail}>{quantity} piece</Text>
+                  <Text style={styles.exp}>
+                    EXP : {expireDate.toLocaleDateString('en-GB')}
+                  </Text>
+                </View>
               </View>
-            </View>
 
-            {/* ขีดแบ่ง */}
-            <View style={styles.sectionDivider} />
-            <Text style={{ textAlign: 'center', marginTop: 10 }}>
-              จำนวนที่ต้องการลบ
-            </Text>
+              <View style={styles.sectionDivider} />
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>
+                Quantity to delete
+              </Text>
 
-              {/* counter + all button */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
                 <TouchableOpacity onPress={() => setDeleteQty(Number(quantity) || 0)}>
                   <Text style={{ color: '#007aff', marginRight: 20 }}>All</Text>
@@ -667,7 +662,7 @@ export default function ShowDetailPersonal() {
                   style={styles.cancelBtn}
                   onPress={() => setShowDeleteQtyModal(false)}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: '500' }}>ยกเลิก</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '500' }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.confirmBtn}
@@ -677,28 +672,26 @@ export default function ShowDetailPersonal() {
                   }}
                 >
                   <Text style={{ color: '#fff', fontSize: 16, fontWeight: '500' }}>
-                    ยืนยัน
+                    Confirm
                   </Text>
                 </TouchableOpacity>
-             </View>   {/* rowBtn */}
-            </View>     {/* modalBox */}
+              </View>
+            </View>
           </BlurView>
         </Modal>
 
       {/* confirm delete modal */}
       {showConfirmDelete && (
       <View style={styles.confirmOverlay}>
-
-       <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
         <View style={styles.confirmBox}>
           <Ionicons name="warning" size={55} color="#F4B400" />
 
           <Text style={styles.confirmTitle}>
-            ยืนยันการลบสินค้า
+            Confirm Product Deletion
           </Text>
 
           <Text style={styles.confirmText}>
-            คุณต้องการลบสินค้า {name} จำนวน {deleteQty} ชิ้น
+            Do you want to delete {deleteQty} piece(s) of {name}?
           </Text>
 
           <View style={styles.confirmButtons}>
@@ -706,14 +699,14 @@ export default function ShowDetailPersonal() {
               style={styles.cancelBtn}
               onPress={() => setShowConfirmDelete(false)}
             >
-              <Text>ยกเลิก</Text>
+              <Text>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.confirmBtn}
               onPress={handleConfirmDelete}
             >
-              <Text style={{ color: "#fff" }}>ยืนยัน</Text>
+              <Text style={{ color: "#fff" }}>Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -776,56 +769,6 @@ export default function ShowDetailPersonal() {
           </TouchableOpacity>
         </Modal>
       )}
-
-      {canManageProduct && (
-        <Modal transparent animationType="fade" visible={showStorage || showExpire}>
-          <TouchableOpacity
-            style={styles.overlay}
-            activeOpacity={1}
-            onPress={() => {
-              setShowStorage(false);
-              setShowExpire(false);
-            }}
-          >
-            <TouchableOpacity activeOpacity={1} style={styles.calendarBox}>
-              <DateTimePicker
-                value={tempDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-                accentColor="#5B5FC7"
-                themeVariant="light"
-                onChange={(e: any, d?: Date) => {
-                  if (d) setTempDate(d);
-                }}
-              />
-
-              <View style={styles.calendarActions}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowStorage(false);
-                    setShowExpire(false);
-                  }}
-                >
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    if (showStorage) setStorageDate(tempDate);
-                    if (showExpire) setExpireDate(tempDate);
-                    setShowStorage(false);
-                    setShowExpire(false);
-                  }}
-                >
-                  <Text style={styles.okText}>OK</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
-      )}
-
-        </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
   );

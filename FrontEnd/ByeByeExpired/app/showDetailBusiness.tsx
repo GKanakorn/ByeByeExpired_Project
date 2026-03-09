@@ -119,7 +119,7 @@ export default function showDetailBusiness() {
 
       setQuantity(newQty.toString())
 
-      showToast('ลบสินค้าเรียบร้อย')
+      showToast('Product deleted successfully')
 
     } catch (err) {
       Alert.alert('Error', 'Delete failed')
@@ -152,7 +152,7 @@ export default function showDetailBusiness() {
       const priceNumber = Number(price)
 
       if (!quantityNumber || quantityNumber <= 0) {
-        Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
+        Alert.alert('Error', 'Quantity must be greater than 0')
         setUploading(false)
         return
       }
@@ -185,12 +185,12 @@ export default function showDetailBusiness() {
       }
 
       if (!productId) {
-        Alert.alert('Error', 'ไม่พบ productId')
+        Alert.alert('Error', 'Product ID not found')
         return
       }
 
       await updateProduct(productId as string, payload)
-      Alert.alert('Success', 'แก้ไขสินค้าเรียบร้อย 🎉')
+      Alert.alert('Success', 'Product updated successfully 🎉')
       router.back()
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Save failed')
@@ -343,7 +343,7 @@ export default function showDetailBusiness() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'ต้องอนุญาตเข้าถึงรูป')
+      Alert.alert('Permission required', 'Photo access permission required')
       return
     }
 
@@ -491,7 +491,7 @@ export default function showDetailBusiness() {
                   style={{ width: 120, height: 120, borderRadius: 8 }}
                 />
               ) : (
-                <Text style={{ color: '#999' }}>แตะเพื่อเลือกรูป</Text>
+                <Text style={{ color: '#999' }}>Tap to select image</Text>
               )}
             </TouchableOpacity>
           ) : (
@@ -702,7 +702,7 @@ export default function showDetailBusiness() {
           <BlurView intensity={40} tint="dark" style={styles.bottomOverlay}>
             <View style={styles.modalBox}>
               <View style={styles.handle} />
-              <Text style={styles.modalTitle}>ลบสินค้าออกจากสต๊อก</Text>
+              <Text style={styles.modalTitle}>Remove Product from Stock</Text>
               <View style={styles.sectionDivider} />
 
               <View style={styles.productRow}>
@@ -720,7 +720,7 @@ export default function showDetailBusiness() {
               </View>
 
               <View style={styles.sectionDivider} />
-              <Text style={{ textAlign: 'center', marginTop: 10 }}>จำนวนที่ต้องการลบ</Text>
+              <Text style={{ textAlign: 'center', marginTop: 10 }}>Quantity to delete</Text>
 
               <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
                 <TouchableOpacity onPress={() => setDeleteQty(Number(quantity) || 0)}>
@@ -755,7 +755,7 @@ export default function showDetailBusiness() {
     style={styles.cancelBtn}
     onPress={() => setShowDeleteQtyModal(false)}
   >
-    <Text style={{ fontSize: 16, fontWeight: '500' }}>ยกเลิก</Text>
+    <Text style={{ fontSize: 16, fontWeight: '500' }}>Cancel</Text>
   </TouchableOpacity>
 
   <TouchableOpacity
@@ -766,7 +766,7 @@ export default function showDetailBusiness() {
     }}
   >
     <Text style={{ color: '#fff', fontSize: 16, fontWeight: '500' }}>
-      ยืนยัน
+      Confirm
     </Text>
   </TouchableOpacity>
   </View>
@@ -786,11 +786,11 @@ export default function showDetailBusiness() {
       <Ionicons name="warning" size={55} color="#F4B400" />
 
       <Text style={styles.confirmTitle}>
-        ยืนยันการลบสินค้า
+        Confirm Product Deletion
       </Text>
 
       <Text style={styles.confirmText}>
-        คุณต้องการลบสินค้า {name} จำนวน {deleteQty} ชิ้น
+        Do you want to delete {deleteQty} piece(s) of {name}?
       </Text>
 
       <View style={styles.confirmButtons}>
@@ -798,14 +798,14 @@ export default function showDetailBusiness() {
           style={styles.cancelBtn}
           onPress={() => setShowConfirmDelete(false)}
         >
-          <Text>ยกเลิก</Text>
+          <Text>Cancel</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.confirmBtn}
           onPress={handleDelete}
         >
-          <Text style={{ color: "#fff" }}>ยืนยัน</Text>
+          <Text style={{ color: "#fff" }}>Confirm</Text>
         </TouchableOpacity>
       </View>
     </View>

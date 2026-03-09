@@ -138,7 +138,7 @@ export default function ScanBarcodeScreen() {
     if (mode === 'add') {
       const res = await lookupBarcode(data)
 
-      router.replace({
+      router.push({
         pathname:
           context === 'business'
             ? '/addProductBusiness'
@@ -153,7 +153,7 @@ export default function ScanBarcodeScreen() {
     }
 
     if (mode === 'remove') {
-      router.replace({
+      router.push({
         pathname: '/deleteProduct',
         params: {
           barcode: data,
@@ -172,7 +172,7 @@ export default function ScanBarcodeScreen() {
         ? '/addProductBusiness'
         : '/addProductPersonal'
 
-    router.replace({
+    router.push({
       pathname: target,
       params: {
         barcode: scannedData ?? undefined,
@@ -184,7 +184,7 @@ export default function ScanBarcodeScreen() {
   const handleDeleteProduct = () => {
     if (mode !== 'remove') return
 
-    router.replace({
+    router.push({
       pathname: '/deleteProduct',
       params: {
         barcode: scannedData ?? undefined,

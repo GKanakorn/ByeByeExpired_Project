@@ -177,7 +177,7 @@ export default function DeleteProduct() {
             <Ionicons name="search" size={18} color="#999" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="ค้นหาสินค้า..."
+              placeholder="Search product..."
               value={searchName}
               onChangeText={setSearchName}
               placeholderTextColor="#999"
@@ -200,7 +200,7 @@ export default function DeleteProduct() {
 
           {!loading && filteredProducts.length === 0 && (
             <Text style={{ textAlign: "center", color: "#666" }}>
-              {searchName ? 'ไม่พบสินค้าที่ค้นหา' : 'No product found'}
+              {searchName ? 'Product not found' : 'No product found'}
             </Text>
           )}
 
@@ -252,7 +252,7 @@ export default function DeleteProduct() {
         <BlurView intensity={40} tint="dark" style={styles.overlay}>
           <View style={styles.modalBox}>
             <View style={styles.handle} />
-            <Text style={styles.modalTitle}>ลบสินค้าออกจากสต๊อก</Text>
+            <Text style={styles.modalTitle}>Remove Product from Stock</Text>
             <View style={styles.sectionDivider} />
 
             <View style={styles.productRow}>
@@ -282,7 +282,7 @@ export default function DeleteProduct() {
             <View style={styles.sectionDivider} />
 
             <Text style={{ marginTop: 20, textAlign: "center", alignSelf: "center", fontSize: 15, }}>
-              จำนวนที่ต้องการลบ
+              Quantity to delete
             </Text>
 
             <View style={styles.counter}>
@@ -316,7 +316,7 @@ export default function DeleteProduct() {
                 style={styles.cancelBtn}
                 onPress={() => setQtyModal(false)}
               >
-                <Text style={{ fontSize: 16, fontWeight: "500" }}>ยกเลิก</Text>
+                <Text style={{ fontSize: 16, fontWeight: "500" }}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -326,7 +326,7 @@ export default function DeleteProduct() {
                   setConfirmModal(true);
                 }}
               >
-                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "500" }}>ยืนยัน</Text>
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "500" }}>Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -345,10 +345,10 @@ export default function DeleteProduct() {
               style={{ marginBottom: 20, alignSelf: "center" }}
             />
 
-            <Text style={styles.modalTitle}>ยืนยันการลบสินค้า</Text>
-            <Text style={{ textAlign: "center", marginVertical: 10 }}>
-              คุณต้องการลบสินค้า {selectedProduct?.product_templates?.name || "No product found"}
-              {"\n"}จำนวน {quantity} ชิ้น
+            <Text style={styles.modalTitle}>Confirm Product Deletion</Text>
+            <Text style={{ textAlign: "center", marginTop: 10, fontSize: 14 }}>
+              Do you want to delete {selectedProduct?.product_templates?.name || "No product found"}
+              {"\n"}{quantity} piece(s)
             </Text>
 
             <View style={styles.rowBtn}>
@@ -356,14 +356,14 @@ export default function DeleteProduct() {
                 style={styles.cancelBtn}
                 onPress={() => setConfirmModal(false)}
               >
-                <Text style={{ fontSize: 16, fontWeight: "600" }}>ยกเลิก</Text>
+                <Text style={{ fontSize: 16, fontWeight: "600" }}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.confirmBtn}
                 onPress={handleDelete}
               >
-                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>ยืนยัน</Text>
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>
