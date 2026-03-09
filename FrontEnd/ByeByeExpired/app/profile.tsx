@@ -74,7 +74,7 @@ export default function ProfilePage() {
         setNearExpireItems(stats.near ?? 0);
         setExpiredItems(stats.expired ?? 0);
 
-        // ✅ โหลด history
+        // ✅ Load history
         setLoadingHistory(true);
         const history = await getDeletedHistory(token);
         setHistoryData(history ?? []);
@@ -93,14 +93,14 @@ export default function ProfilePage() {
     try {
       if (!userId) return;
 
-      // ขอ permission
+      // Request permission
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        alert('กรุณาอนุญาตให้เข้าถึงรูปภาพ');
+        alert('Please allow access to photos');
         return;
       }
 
-      // เปิดเลือกภาพ
+      // Open image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
@@ -117,7 +117,7 @@ export default function ProfilePage() {
       const fileExt = image.uri.split('.').pop() ?? 'jpg';
       const fileName = `${userId}.${fileExt}`;
 
-      // อัปโหลดไป Supabase Storage (ใช้ arrayBuffer แทน blob เพื่อแก้ปัญหา 0 bytes ใน React Native)
+      // Upload to Supabase Storage (using arrayBuffer instead of blob to fix 0 bytes issue in React Native)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, arrayBuffer, {
@@ -127,30 +127,30 @@ export default function ProfilePage() {
 
       if (uploadError) {
         console.log(uploadError);
-        alert('อัปโหลดรูปไม่สำเร็จ');
+        alert('Failed to upload image');
         return;
       }
 
-      // ดึง public URL
+      // Get public URL
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
       const publicUrl = data.publicUrl;
 
-      // อัปเดตใน profiles table, now via backend API
+      // Update profiles table via backend API
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
       if (!token) return;
 
       await updateProfile(token, { avatar_url: publicUrl });
 
-      // เพิ่ม query param กัน cache เพื่อให้รูปโหลดใหม่ทันที
+      // Add query param to prevent cache and reload image immediately
       setAvatarUrl(`${publicUrl}?t=${Date.now()}`);
-      alert('เปลี่ยนรูปโปรไฟล์สำเร็จ');
+      alert('Profile picture updated successfully');
     } catch (err) {
       console.log(err);
-      alert('เกิดข้อผิดพลาด');
+      alert('An error occurred');
     }
   };
 
@@ -161,9 +161,9 @@ export default function ProfilePage() {
       if (!token) return;
 
       await updateProfile(token, { full_name: fullName });
-      alert('อัปเดตชื่อสำเร็จ');
+      alert('Name updated successfully');
     } catch (error) {
-      alert('อัปเดตชื่อไม่สำเร็จ');
+      alert('Failed to update name');
     }
   };
 
@@ -180,31 +180,31 @@ export default function ProfilePage() {
       setNearExpireItems(0);
       setExpiredItems(0);
 
-      // กลับไปหน้า Load / Login (ปรับ path ถ้าหน้าแรกชื่ออื่น)
+      // Navigate to Load / Login page
       router.replace('/');
     } catch (error) {
-      alert('ออกจากระบบไม่สำเร็จ');
+      alert('Failed to sign out');
     }
   };
 
   const handleDeleteAccount = async () => {
     Alert.alert(
-      'ยืนยันการลบบัญชี',
-      'คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี? การกระทำนี้ไม่สามารถย้อนกลับได้ และข้อมูลทั้งหมดที่คุณสร้างจะถูกลบถาวร',
+      'Confirm Account Deletion',
+      'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
       [
         {
-          text: 'ยกเลิก',
+          text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'ลบบัญชี',
+          text: 'Delete Account',
           style: 'destructive',
           onPress: async () => {
             try {
               const { data: sessionData } = await supabase.auth.getSession();
               const token = sessionData?.session?.access_token;
               if (!token) {
-                alert('ไม่พบ token การยืนยันตัวตน');
+                alert('Authentication token not found');
                 return;
               }
 
@@ -220,10 +220,10 @@ export default function ProfilePage() {
               setNearExpireItems(0);
               setExpiredItems(0);
 
-              alert('ลบบัญชีสำเร็จ');
+              alert('Account deleted successfully');
               router.replace('/');
             } catch (error: any) {
-              alert(error.message || 'ลบบัญชีไม่สำเร็จ');
+              alert(error.message || 'Failed to delete account');
             }
           },
         },
@@ -285,16 +285,17 @@ export default function ProfilePage() {
   });
 
   return (
-    <LinearGradient
-      colors={['#BFEFFF', '#E8D5FF', '#F5D0FE']}
-      locations={[0, 0.5, 1]}
-      style={styles.container}
-    >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <LinearGradient
+        colors={['#BFEFFF', '#E8D5FF', '#F5D0FE']}
+        locations={[0, 0.5, 1]}
+        style={styles.container}
+      >
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
         {/* Header Icons */}
         <View style={styles.headerIcons}>
           <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
-            <Ionicons name="home" size={26} color="#6B7280" />
+            <Ionicons name="chevron-back" size={24} color="#5A6AE0" />
           </TouchableOpacity>
         </View>
 
@@ -321,10 +322,10 @@ export default function ProfilePage() {
                 {avatarUrl ? (
                   <Image
                     source={{ uri: avatarUrl }}
-                    style={{ width: 90, height: 90, borderRadius: 45 }}
+                    style={{ width: 76, height: 76, borderRadius: 38 }}
                   />
                 ) : (
-                  <Ionicons name="person-circle" size={90} color="#A78BFA" />
+                  <Ionicons name="person-circle" size={76} color="#A78BFA" />
                 )}
               </View>
             </LinearGradient>
@@ -362,7 +363,7 @@ export default function ProfilePage() {
               ) : (
                 <>
                   <Text style={styles.userName}>
-                    {fullName || 'ยังไม่ได้ตั้งชื่อ'}
+                    {fullName || 'Name not set'}
                   </Text>
                   <TouchableOpacity onPress={() => setIsEditingName(true)}>
                     <Ionicons name="pencil" size={16} color="#7C3AED" />
@@ -375,17 +376,17 @@ export default function ProfilePage() {
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{totalItems}</Text>
-                <Text style={styles.statLabel}>สินค้า</Text>
+                <Text style={styles.statLabel}>Products</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{nearExpireItems}</Text>
-                <Text style={styles.statLabel}>ใกล้หมดอายุ</Text>
+                <Text style={styles.statLabel}>Near Expiry</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{expiredItems}</Text>
-                <Text style={styles.statLabel}>หมดอายุ</Text>
+                <Text style={styles.statLabel}>Expired</Text>
               </View>
             </View>
           </LinearGradient>
@@ -407,7 +408,7 @@ export default function ProfilePage() {
               <Ionicons name="search" size={18} color="#A78BFA" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="ค้นหาชื่อสินค้า..."
+                placeholder="Search product name..."
                 placeholderTextColor="#A78BFA"
                 value={searchText}
                 onChangeText={setSearchText}
@@ -549,7 +550,7 @@ export default function ProfilePage() {
                   </Text>
                 ) : (
                   <Text style={{ textAlign: 'center', marginTop: 20 }}>
-                    ยังไม่มีประวัติการลบสินค้า
+                    No deletion history yet
                   </Text>
                 )
               }
@@ -610,41 +611,45 @@ export default function ProfilePage() {
           </LinearGradient>
         </View>
 
-        {/* Sign Out Button */}
-        <TouchableOpacity
-          style={styles.signOutButton}
-          activeOpacity={0.8}
-          onPress={handleSignOut}
-        >
-          <LinearGradient
-            colors={['#7C3AED', '#6D28D9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.signOutGradient}
+        {/* Action Buttons */}
+        <View style={styles.actionButtonsContainer}>
+          {/* Delete Account Button */}
+          <TouchableOpacity
+            style={styles.deleteAccountButton}
+            activeOpacity={0.8}
+            onPress={handleDeleteAccount}
           >
-            <Ionicons name="log-out-outline" size={18} color="#fff" />
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={['#DC2626', '#B91C1C']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.deleteAccountGradient}
+            >
+              <Ionicons name="trash-outline" size={18} color="#fff" />
+              <Text style={styles.deleteAccountText}>Delete</Text>
+            </LinearGradient>
+          </TouchableOpacity>
 
-        {/* Delete Account Button */}
-        <TouchableOpacity
-          style={styles.deleteAccountButton}
-          activeOpacity={0.8}
-          onPress={handleDeleteAccount}
-        >
-          <LinearGradient
-            colors={['#DC2626', '#B91C1C']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.deleteAccountGradient}
+          {/* Sign Out Button */}
+          <TouchableOpacity
+            style={styles.signOutButton}
+            activeOpacity={0.8}
+            onPress={handleSignOut}
           >
-            <Ionicons name="trash-outline" size={18} color="#fff" />
-            <Text style={styles.deleteAccountText}>ลบบัญชี</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={['#7C3AED', '#6D28D9']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.signOutGradient}
+            >
+              <Ionicons name="log-out-outline" size={18} color="#fff" />
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
-    </LinearGradient>
+      </LinearGradient>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -654,21 +659,21 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingTop: 8,
+    paddingHorizontal: 24,
+    paddingBottom: 12,
   },
   headerIcons: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     paddingHorizontal: 16,
   },
   iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -680,12 +685,12 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   titleBadge: {
-    paddingHorizontal: 28,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    borderRadius: 18,
     shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -693,19 +698,19 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 0.5,
   },
   profileCardWrapper: {
     alignItems: 'center',
-    marginBottom: 6,
-    paddingHorizontal: 12,
+    marginBottom: 16,
+    paddingHorizontal: 20,
   },
   avatarContainer: {
     zIndex: 10,
-    marginBottom: -50,
+    marginBottom: -42,
     shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
@@ -714,10 +719,10 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     width: '100%',
-    borderRadius: 24,
-    paddingTop: 50,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
+    borderRadius: 20,
+    paddingTop: 42,
+    paddingBottom: 10,
+    paddingHorizontal: 14,
     alignItems: 'center',
     shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 8 },
@@ -726,15 +731,15 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    padding: 4,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    padding: 3,
   },
   avatarInner: {
     flex: 1,
     backgroundColor: '#F3E8FF',
-    borderRadius: 46,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -742,50 +747,50 @@ const styles = StyleSheet.create({
     fontSize: 48,
   },
   userName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#5B21B6',
-    marginTop: 6,
+    marginTop: 4,
     letterSpacing: 0.3,
   },
   userEmail: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-evenly',
     width: '100%',
-    marginTop: 14,
-    paddingTop: 14,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(167, 139, 250, 0.3)',
   },
   statItem: {
     alignItems: 'center',
-    minWidth: 70,
+    minWidth: 60,
   },
   statNumber: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#7C3AED',
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
-    marginTop: 2,
+    marginTop: 1,
   },
   statDivider: {
     width: 1,
-    height: 30,
+    height: 24,
     backgroundColor: 'rgba(167, 139, 250, 0.4)',
   },
   historySectionWrapper: {
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     flex: 1,
-    marginTop: 4,
+    marginTop: 12,
     shadowColor: '#A78BFA',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
@@ -794,8 +799,8 @@ const styles = StyleSheet.create({
   },
   historySection: {
     flex: 1,
-    borderRadius: 24,
-    padding: 16,
+    borderRadius: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: 'rgba(167, 139, 250, 0.3)',
   },
@@ -803,11 +808,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 8,
   },
   historyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#7C3AED',
   },
@@ -815,11 +820,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: 12,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#E9D5FF',
-    marginBottom: 10,
+    marginBottom: 8,
     shadowColor: '#A78BFA',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -831,8 +836,8 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 10,
-    fontSize: 14,
+    paddingVertical: 8,
+    fontSize: 13,
     color: '#374151',
   },
   historyCardGradient: {
@@ -888,12 +893,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#4B5563',
   },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 28,
+    marginTop: 10,
+    marginBottom: 12,
+    gap: 10,
+  },
   signOutButton: {
-    marginTop: 6,
-    borderRadius: 20,
+    flex: 1,
+    borderRadius: 16,
     overflow: 'hidden',
-    alignSelf: 'center',
-    width: '50%',
     shadowColor: '#A78BFA',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -906,7 +917,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderRadius: 20,
+    borderRadius: 16,
   },
   signOutText: {
     fontSize: 15,
@@ -914,11 +925,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   deleteAccountButton: {
-    marginTop: 10,
-    borderRadius: 20,
+    flex: 1,
+    borderRadius: 16,
     overflow: 'hidden',
-    alignSelf: 'center',
-    width: '50%',
     shadowColor: '#DC2626',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -931,7 +940,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderRadius: 20,
+    borderRadius: 16,
   },
   deleteAccountText: {
     fontSize: 15,
@@ -943,9 +952,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     backgroundColor: '#7C3AED',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -957,13 +966,13 @@ const styles = StyleSheet.create({
   quickFilterContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 4,
-    marginBottom: 12,
+    gap: 3,
+    marginBottom: 10,
   },
   quickFilterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderWidth: 1.5,
     borderColor: '#7C3AED',
@@ -978,7 +987,7 @@ const styles = StyleSheet.create({
     borderColor: '#7C3AED',
   },
   quickFilterText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#5B21B6',
     fontWeight: '500',
   },
