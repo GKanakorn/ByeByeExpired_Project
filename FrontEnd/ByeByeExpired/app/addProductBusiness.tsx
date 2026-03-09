@@ -64,6 +64,7 @@ export default function AddProductScreen() {
   const [name, setName] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [dismissedSearchForName, setDismissedSearchForName] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [image, setImage] = useState<string | null>(null)
@@ -181,6 +182,14 @@ export default function AddProductScreen() {
     if (name.trim().length === 0) {
       setSearchResults([])
       setShowSearchResults(false)
+      setDismissedSearchForName(false)
+      setIsSearching(false)
+      return
+    }
+
+    if (dismissedSearchForName) {
+      setShowSearchResults(false)
+      setIsSearching(false)
       return
     }
 
@@ -238,7 +247,17 @@ export default function AddProductScreen() {
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [name, locationId])
+  }, [name, locationId, dismissedSearchForName])
+
+  const handleNameChange = (value: string) => {
+    setName(value)
+    setDismissedSearchForName(false)
+  }
+
+  const handleUseTypedName = () => {
+    setDismissedSearchForName(true)
+    setShowSearchResults(false)
+  }
 
   const handleSelectProduct = (product: any) => {
     // 1️⃣ Set name from selection
@@ -269,7 +288,7 @@ export default function AddProductScreen() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'ต้องอนุญาตเข้าถึงรูป')
+      Alert.alert('Permission required', 'Please allow access to your photos')
       return
     }
 
@@ -328,12 +347,44 @@ export default function AddProductScreen() {
     try {
       setUploading(true)
 
+      if (
+        !name.trim() ||
+        !category ||
+        !storage ||
+        !quantity.trim() ||
+        !price.trim() ||
+        !supplier ||
+        supplier === '__add_new__'
+      ) {
+        Alert.alert('Error', 'Please fill in Name, Category, Storage, Quantity, Price, and Supplier')
+        return
+      }
+
+      if (expireDate <= storageDate) {
+        Alert.alert('Error', 'Expired Date must be later than Storage Date')
+        return
+      }
+
+      if (notifyEnabled && notifyDays.trim() && Number(notifyDays) < 0) {
+        Alert.alert('Error', 'Days Before Expiry cannot be negative')
+        return
+      }
+
+      if (lowStock && lowStockThreshold.trim() && Number(lowStockThreshold) < 0) {
+        Alert.alert('Error', 'Low stock threshold cannot be negative')
+        return
+      }
+
       const quantityNumber = Number(quantity)
       const priceNumber = Number(price)
 
       if (!quantityNumber || quantityNumber <= 0) {
-        Alert.alert('Error', 'Quantity ต้องมากกว่า 0')
-        setUploading(false)
+        Alert.alert('Error', 'Quantity must be greater than 0')
+        return
+      }
+
+      if (!priceNumber || priceNumber <= 0) {
+        Alert.alert('Error', 'Price must be greater than 0')
         return
       }
 
@@ -373,7 +424,7 @@ export default function AddProductScreen() {
         notifyBeforeDays: notifyEnabled ? Number(notifyDays) : null,
       })
 
-      Alert.alert('Success', 'บันทึกสินค้าเรียบร้อย 🎉')
+      Alert.alert('Success', 'Product saved successfully 🎉')
       router.push('/overview')
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Save failed')
@@ -509,7 +560,7 @@ export default function AddProductScreen() {
             <TextInput
               style={styles.input}
               value={name}
-              onChangeText={setName}
+              onChangeText={handleNameChange}
               placeholder="Enter product name or search existing"
             />
             {isSearching && (
@@ -524,6 +575,12 @@ export default function AddProductScreen() {
           {/* Search Results Below Input */}
           {showSearchResults && (
             <View style={styles.searchResultsDropdown}>
+              <TouchableOpacity
+                style={styles.useTypedNameButton}
+                onPress={handleUseTypedName}
+              >
+                <Text style={styles.useTypedNameText}>Use "{name}"</Text>
+              </TouchableOpacity>
               {searchResults.length > 0 ? (
                 <FlatList
                   data={searchResults}
@@ -919,6 +976,18 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: '#E8E8E8',
+  },
+  useTypedNameButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDEDED',
+    backgroundColor: '#F7F8FF',
+  },
+  useTypedNameText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4d70e2ff',
   },
   searchResultItem: {
     paddingVertical: 8,

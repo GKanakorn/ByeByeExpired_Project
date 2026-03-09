@@ -3,6 +3,13 @@ import { requireAuth } from "../middleware/auth.middleware"
 import { requireLocationRole } from "../middleware/locationRole.middleware"
 import { AuthRequest } from "../types/auth-request"
 import { supabaseAdmin } from "../supabase"
+import {
+  createSupplier,
+  getSuppliersByUser,
+  getSupplierById,
+  updateSupplier,
+  deleteSupplier,
+} from "../services/supplier.service"
 
 const router = Router()
 
@@ -76,30 +83,18 @@ router.post(
         image_url,
       } = req.body
 
-      const { data, error } = await supabaseAdmin
-        .from("suppliers")
-        .insert([
-          {
-            user_id: ownerId,
-            company_name,
-            phone,
-            address,
-            email,
-            contact_name,
-            note,
-            image_url,
-          },
-        ])
-        .select()
+      const supplier = await createSupplier({
+        user_id: ownerId,
+        company_name,
+        phone,
+        address,
+        email,
+        contact_name,
+        note,
+        image_url,
+      })
 
-      if (error) {
-        return res.status(400).json({
-          error,
-          message: "Create supplier failed",
-        })
-      }
-
-      res.json(data[0])
+      res.json(supplier)
     } catch (err) {
       console.error(err)
       res.status(500).json({ message: "Server error" })
@@ -126,17 +121,9 @@ router.get(
         )
       }
 
-      const { data, error } = await supabaseAdmin
-        .from("suppliers")
-        .select("*")
-        .eq("user_id", supplierOwnerId)
-        .order("created_at", { ascending: false })
+      const suppliers = await getSuppliersByUser(supplierOwnerId)
 
-      if (error) {
-        return res.status(400).json({ message: error.message })
-      }
-
-      res.json(data)
+      res.json(suppliers)
     } catch (err) {
       console.error('GET SUPPLIERS ERROR:', err)
       res.status(500).json({ message: "Fetch suppliers failed" })
@@ -154,7 +141,7 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.query.locationId as string | undefined
-      const supplierId = req.params.id
+      const supplierId = req.params.id as string
 
       if (!locationId) {
         return res.status(400).json({ message: "locationId is required" })
@@ -162,18 +149,9 @@ router.get(
 
       const ownerId = await getLocationOwnerId(locationId)
 
-      const { data, error } = await supabaseAdmin
-        .from("suppliers")
-        .select("*")
-        .eq("id", supplierId)
-        .eq("user_id", ownerId)
-        .single()
+      const supplier = await getSupplierById(supplierId, ownerId)
 
-      if (error) {
-        return res.status(400).json({ message: error.message })
-      }
-
-      res.json(data)
+      res.json(supplier)
     } catch (err) {
       res.status(500).json({ message: "Fetch supplier failed" })
     }
@@ -190,7 +168,7 @@ router.put(
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.body.locationId || req.query.locationId
-      const supplierId = req.params.id
+      const supplierId = req.params.id as string as string
 
       if (!locationId) {
         return res.status(400).json({ message: "locationId is required" })
@@ -208,27 +186,17 @@ router.put(
         image_url,
       } = req.body
 
-      const { data, error } = await supabaseAdmin
-        .from("suppliers")
-        .update({
-          company_name,
-          phone,
-          address,
-          email,
-          contact_name,
-          note,
-          image_url,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", supplierId)
-        .eq("user_id", ownerId)
-        .select()
+      const supplier = await updateSupplier(supplierId, ownerId, {
+        company_name,
+        phone,
+        address,
+        email,
+        contact_name,
+        note,
+        image_url,
+      })
 
-      if (error) {
-        return res.status(400).json({ message: error.message })
-      }
-
-      res.json(data[0])
+      res.json(supplier)
     } catch (err) {
       res.status(500).json({ message: "Update failed" })
     }
@@ -245,7 +213,7 @@ router.delete(
   async (req: AuthRequest, res: Response) => {
     try {
       const locationId = req.query.locationId as string | undefined
-      const supplierId = req.params.id
+      const supplierId = req.params.id as string as string
 
       if (!locationId) {
         return res.status(400).json({ message: "locationId is required" })
@@ -253,15 +221,7 @@ router.delete(
 
       const ownerId = await getLocationOwnerId(locationId)
 
-      const { error } = await supabaseAdmin
-        .from("suppliers")
-        .delete()
-        .eq("id", supplierId)
-        .eq("user_id", ownerId)
-
-      if (error) {
-        return res.status(400).json({ message: error.message })
-      }
+      await deleteSupplier(supplierId, ownerId)
 
       res.json({ success: true })
     } catch (err) {

@@ -4,12 +4,13 @@
     "slug": "ByeByeExpired",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo-app.png",
     "scheme": "byebyeexpired",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "icon": "./assets/images/logo-app.png",
       "bundleIdentifier": "com.gkanakorn.ByeByeExpired",
       "infoPlist": {
         "NSCameraUsageDescription": "ใช้กล้องเพื่อสแกนบาร์โค้ดสินค้า"
