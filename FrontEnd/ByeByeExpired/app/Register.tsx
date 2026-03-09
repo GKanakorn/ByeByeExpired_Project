@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform, ScrollView, Image } from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, Keyboard, TouchableWithoutFeedback, ScrollView, Image, Platform, KeyboardAvoidingView } from "react-native";
 import { supabase } from '../src/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
@@ -151,6 +151,12 @@ const RegisterScreen = () => {
   };
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Auto scroll to input when focused
+  const scrollToInput = (yOffset: number) => {
+    scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
+  };
 
   // Function จัดการเมื่อ keyboard แสดงขึ้น - อัปเดต state เพื่อปรับ UI
   const handleKeyboardShow = (event: any) => {
@@ -160,6 +166,8 @@ const RegisterScreen = () => {
   // Function จัดการเมื่อ keyboard ซ่อน - อัปเดต state เพื่อปรับ UI กลับสู่ปกติ
   const handleKeyboardHide = (event: any) => {
     setIsKeyboardVisible(false);
+    // Scroll back to top when keyboard hides
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   useEffect(() => {
@@ -174,19 +182,12 @@ const RegisterScreen = () => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined} 
-        keyboardVerticalOffset={100}
-      >
+      <View style={{ flex: 1 }}>
         <ImageBackground source={require("../assets/images/background.jpg")} style={styles.container}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
           <View style={styles.formContainer}>
-            <ScrollView 
-              contentContainerStyle={styles.scrollContainer}
-            >
               <Text style={styles.headerText}>Create account</Text>
               
               {/* Google Login Button */}
@@ -205,40 +206,54 @@ const RegisterScreen = () => {
                 <View style={styles.dividerLine} />
               </View>
 
-              <Text style={styles.label}>Full name</Text>
-              <TextInput
-                style={styles.input}
-                value={fullName}
-                onChangeText={setFullName}
-              />
-              <Text style={styles.label}>Email address</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-              />
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-              <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-              />
-              <TouchableOpacity style={styles.button} onPress={handleRegister}>
-                <Text style={styles.buttonText}>Sign Up</Text>
-              </TouchableOpacity>
-            </ScrollView>
+              {/* Scrollable form fields */}
+              <ScrollView 
+                ref={scrollViewRef}
+                contentContainerStyle={styles.scrollContainer}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                scrollEnabled={false}
+              >
+                <Text style={styles.label}>Full name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  onFocus={() => scrollToInput(0)}
+                />
+                <Text style={styles.label}>Email address</Text>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  onFocus={() => scrollToInput(60)}
+                />
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  onFocus={() => scrollToInput(120)}
+                />
+                <Text style={styles.label}>Confirm Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  onFocus={() => scrollToInput(200)}
+                />
+              </ScrollView>
+              {!isKeyboardVisible && (
+                <TouchableOpacity style={styles.button} onPress={handleRegister}>
+                  <Text style={styles.buttonText}>Sign Up</Text>
+                </TouchableOpacity>
+              )}
           </View>
         </ImageBackground>
-      </KeyboardAvoidingView>
+      </View>
     </TouchableWithoutFeedback>
   );
 };
@@ -267,11 +282,10 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     padding: 20,
     borderRadius: 80,
-    marginTop: 280,
-    paddingBottom: 30,
+    maxHeight: '68%',
   },
   scrollContainer: {
-    flexGrow: 1,
+    paddingBottom: 300,
   },
   headerText: {
     fontSize: 24,
@@ -343,12 +357,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 80,
     borderRadius: 50,
     alignItems: "center",
-    marginTop: 30,
-    shadowColor: "#a85a9a",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    elevation: 10,
+    marginTop: 10,
+    marginBottom: 20,
   },
   buttonText: {
     color: "#6a367a",
