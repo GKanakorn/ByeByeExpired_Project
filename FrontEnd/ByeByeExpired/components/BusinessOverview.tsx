@@ -122,7 +122,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
       >
         <Text style={{ color: "white", fontWeight: "600",fontSize:12 }}>
           Edit
-        </Text>
+        </Text> 
       </TouchableOpacity>
 
       {/* DELETE */}

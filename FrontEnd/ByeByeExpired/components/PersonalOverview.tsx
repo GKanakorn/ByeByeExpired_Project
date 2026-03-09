@@ -115,7 +115,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
 
             {/* EDIT */}
             <TouchableOpacity
-                style={styles.editButton}
+                style={styles.editButton} 
                 onPress={() => {
                     router.push({
                         pathname: "/addStorage",
