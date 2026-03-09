@@ -123,7 +123,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                     })
                 }}
             >
-                <Text style={{ color: "white", fontWeight: "600" }}>
+                <Text style={{ color: "white", fontWeight: "600",fontSize:12 }}>
                     Edit
                 </Text>
             </TouchableOpacity>
@@ -133,7 +133,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                 style={styles.deleteButton}
                 onPress={() => handleDeleteStorage(storageId)}
             >
-                <Text style={{ color: "white", fontWeight: "600" }}>
+                <Text style={{ color: "white", fontWeight: "600",fontSize:12 }}>
                     Delete
                 </Text>
             </TouchableOpacity>
@@ -181,16 +181,18 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header */}
+                <Text style={styles.locationTitle}>
+                    {location.name}
+                </Text>
                 <View style={styles.header}>
                     {/* ซ้าย */}
                     <View style={{ flexDirection: "row", alignItems: "center" }}>
                         <View style={styles.dateBox}>
                             <Image
-                                source={require("../assets/images/home.png")}
+                                source={require("../assets/images/home1.png")}
                                 style={styles.headerIcon}
                                 resizeMode="contain"
                             />
-                            <Text style={styles.dateText}>{location.name}</Text>
                             <Text style={styles.dateText}>{formattedDate}</Text>
                         </View>
                     </View>
@@ -253,7 +255,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                         <MaterialIcons name="error-outline" size={20} color="#F5A623" />
                         <Text style={[styles.sectionText, { color: "#ce840d" }]}>Nearly expired</Text>
                     </View>
-                    <View style={styles.badge}>
+                    <View style={styles.badgeNear}>
                         <Text style={styles.badgeText}>{nearlyExpired.length}</Text>
                     </View>
                 </LinearGradient>
@@ -688,8 +690,8 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingTop: 50, // เว้นระยะจากขอบบน
-        marginBottom: 2,
+        paddingTop: 15, // เว้นระยะจากขอบบน
+        marginBottom: 4,
     },
     dateBox: {
         flexDirection: "row",
@@ -712,6 +714,11 @@ const styles = StyleSheet.create({
         height: 44,
         justifyContent: 'center',
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 5,
     },
     iconWithBadge: {
         position: 'relative',
@@ -775,6 +782,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
         marginTop: 16,
+        overflow: "hidden",
     },
     sectionTitle: {
         flexDirection: "row",
@@ -796,7 +804,7 @@ const styles = StyleSheet.create({
         width: 90,
     },
     cardEx: {
-        backgroundColor: "#BE9090",
+        backgroundColor: "#ffdddd",
         padding: 10,
         borderRadius: 12,
         marginRight: 10,
@@ -812,11 +820,11 @@ const styles = StyleSheet.create({
     },
     cardDateEx: {
         fontSize: 10,
-        color: "#ffffff",
+        color: "#db4a4a",
     },
     cardDateNear: {
         fontSize: 10,
-        color: "#888",
+        color: "#ba8917",
     },
 
     NearlyExpiredBox: {
@@ -929,6 +937,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    badgeNear: {
+        backgroundColor: "#ff9f19",
+        width: 28,
+        height: 28,
+
+        borderRadius: 14,   // ต้อง = width/2
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     addIcon: {
         width: 45,
         height: 45,
@@ -988,27 +1005,37 @@ const styles = StyleSheet.create({
         width: 27,
         height: 27,
     },
+
     deleteButton: {
-        backgroundColor: '#FF3B30',
+        backgroundColor: '#ff5b52',
         justifyContent: 'center',
         alignItems: 'center',
-        width: 100,
-        borderRadius: 12,
-        marginVertical: 5,
+        width: 70,
+        height: 40,
+        borderRadius: 50,
+        marginVertical: 15,
     },
+
     editButton: {
-        backgroundColor: "#4CAF50",
+        backgroundColor: "#66ba69",
         justifyContent: 'center',
         alignItems: 'center',
-        width: 100,
-        borderRadius: 12,
-        marginVertical: 5,
+        width: 70,
+        height: 40,
+        borderRadius: 50,
+        marginVertical: 15,
     },
 
     deleteText: {
         color: 'white',
         fontWeight: 'bold',
     },
+
+    editText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+
     searchOverlayBackground: {
         position: "absolute",
         top: 0,
@@ -1054,4 +1081,14 @@ const styles = StyleSheet.create({
         color: "#666",
         marginTop: 2,
     },
+
+    locationTitle: {
+        textAlign: "center",
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#FF6EC7",
+        marginTop: 50,
+        marginBottom: 10,
+    }
+
 });
