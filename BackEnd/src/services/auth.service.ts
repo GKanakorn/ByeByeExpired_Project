@@ -7,9 +7,9 @@ const DEFAULT_LOCATION_CONFIGS = [
 ]
 
 const DEFAULT_STORAGE_CONFIGS = [
-  { name: 'Freezer', icon: 'freezer', color: '#3498DB' },
-  { name: 'Fridge', icon: 'fridge', color: '#FFB6C1' },
-  { name: 'Dry food', icon: 'pantry', color: '#E67E22' },
+  { name: 'Freezer', icon: 'freezer2', color: '#3498DB' },
+  { name: 'Fridge', icon: 'fridge1', color: '#FFB6C1' },
+  { name: 'Dry Food', icon: 'can', color: '#F1C40F' },
 ]
 
 async function createDefaultLocationsAndStorages(userId: string) {
