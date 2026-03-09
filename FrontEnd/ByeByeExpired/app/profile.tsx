@@ -284,11 +284,12 @@ export default function ProfilePage() {
   });
 
   return (
-    <LinearGradient
-      colors={['#BFEFFF', '#E8D5FF', '#F5D0FE']}
-      locations={[0, 0.5, 1]}
-      style={styles.container}
-    >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <LinearGradient
+        colors={['#BFEFFF', '#E8D5FF', '#F5D0FE']}
+        locations={[0, 0.5, 1]}
+        style={styles.container}
+      >
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
         {/* Header Icons */}
         <View style={styles.headerIcons}>
@@ -647,7 +648,8 @@ export default function ProfilePage() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-    </LinearGradient>
+      </LinearGradient>
+    </TouchableWithoutFeedback>
   );
 }
 
