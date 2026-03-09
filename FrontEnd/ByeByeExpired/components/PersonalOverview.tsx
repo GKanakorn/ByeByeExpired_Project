@@ -41,6 +41,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
     const [searchText, setSearchText] = useState("")
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
+    const [openedStorageId, setOpenedStorageId] = useState<string | null>(null)
 
     const [allProducts, setAllProducts] = useState<any[]>([])
     const role = location.role
@@ -111,7 +112,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
         )
     }
     const renderRightActions = (storageId: string) => (
-        <View style={{ flexDirection: "row" }}>
+        <View style={styles.rightActionsContainer}>
 
             {/* EDIT */}
             <TouchableOpacity
@@ -123,7 +124,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                     })
                 }}
             >
-                <Text style={{ color: "white", fontWeight: "600",fontSize:12 }}>
+                <Text style={{ color: "white", fontWeight: "600",fontSize:14 }}>
                     Edit
                 </Text>
             </TouchableOpacity>
@@ -133,7 +134,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                 style={styles.deleteButton}
                 onPress={() => handleDeleteStorage(storageId)}
             >
-                <Text style={{ color: "white", fontWeight: "600",fontSize:12 }}>
+                <Text style={{ color: "white", fontWeight: "600",fontSize:14 }}>
                     Delete
                 </Text>
             </TouchableOpacity>
@@ -217,7 +218,12 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
 
                 {/* Search */}
                 <View style={styles.searchSection}>
-                    <View style={styles.searchInputWrapper}>
+                    <View
+                        style={[
+                            styles.searchInputWrapper,
+                            searchText.length > 0 && styles.searchInputWrapperActive,
+                        ]}
+                    >
                         <Ionicons name="search" size={18} color="#999" style={styles.searchIcon} />
                         <TextInput
                             placeholder="Search Product"
@@ -241,6 +247,38 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                             </TouchableOpacity>
                         )}
                     </View>
+
+                    {searchText.length > 0 && (
+                        <View style={styles.searchDropdown}>
+                            {isSearching ? (
+                                <Text style={styles.searchResultText}>Searching...</Text>
+                            ) : searchResults.length === 0 ? (
+                                <Text style={styles.searchResultText}>No product found</Text>
+                            ) : (
+                                searchResults.map((item) => (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={styles.searchResultItem}
+                                        onPress={() => {
+                                            setSearchText("")
+                                            setSearchResults([])
+                                            router.push({
+                                                pathname: "/showDetailPersonal",
+                                                params: {
+                                                    productId: item.id,
+                                                    locationId: location.id
+                                                }
+                                            })
+                                        }}
+                                    >
+                                        <Text style={styles.searchResultText}>
+                                            {item.product_templates?.name}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))
+                            )}
+                        </View>
+                    )}
                 </View>
 
 
@@ -395,11 +433,14 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                                 renderRightActions={() => renderRightActions(item.id)}
                                 overshootRight={false}
                                 rightThreshold={40}
+                                onSwipeableOpen={() => setOpenedStorageId(item.id)}
+                                onSwipeableClose={() => setOpenedStorageId(null)}
                             >
                                 <TouchableOpacity
                                     onPress={() => goToStorage(item.id)}
                                     style={[
                                         styles.storageItem,
+                                        openedStorageId === item.id && styles.storageItemSwipe,
                                         {
                                             backgroundColor: "#d3ddff4d",
                                             borderRadius: 12,
@@ -493,49 +534,6 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                     )}
                 </View>
             </ScrollView>
-
-            {searchText.length > 0 && (
-                <>
-                    <TouchableOpacity
-                        style={styles.searchOverlayBackground}
-                        activeOpacity={1}
-                        onPress={() => {
-                            setSearchText("")
-                            setSearchResults([])
-                        }}
-                    />
-
-                    <View style={styles.searchDropdown}>
-                        {isSearching ? (
-                            <Text style={styles.searchResultText}>Searching...</Text>
-                        ) : searchResults.length === 0 ? (
-                            <Text style={styles.searchResultText}>No product found</Text>
-                        ) : (
-                            searchResults.map((item) => (
-                                <TouchableOpacity
-                                    key={item.id}
-                                    style={styles.searchResultItem}
-                                    onPress={() => {
-                                        setSearchText("")
-                                        setSearchResults([])
-                                        router.push({
-                                            pathname: "/showDetailPersonal",
-                                            params: {
-                                                productId: item.id,
-                                                locationId: location.id
-                                            }
-                                        })
-                                    }}
-                                >
-                                    <Text style={styles.searchResultText}>
-                                        {item.product_templates?.name}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))
-                        )}
-                    </View>
-                </>
-            )}
 
             {/* Bottom Navigation */}
             <View style={styles.bottomNavWrapper}>
@@ -754,6 +752,9 @@ const styles = StyleSheet.create({
     searchSection: {
         paddingVertical: 8,
         marginBottom: 6,
+        position: 'relative',
+        zIndex: 4000,
+        elevation: 20,
     },
     searchInputWrapper: {
         flexDirection: 'row',
@@ -764,6 +765,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E8E8E8',
         height: 45,
+    },
+    searchInputWrapperActive: {
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+        borderBottomWidth: 0,
     },
     searchIcon: {
         marginRight: 8,
@@ -859,7 +865,21 @@ const styles = StyleSheet.create({
     storageItem: {
         flexDirection: "row",
         alignItems: "center",
+        minHeight: 68,
         marginBottom: 10,
+    },
+    storageItemSwipe: {
+        borderTopRightRadius: 0,
+        borderBottomRightRadius: 0,
+    },
+    rightActionsContainer: {
+        flexDirection: 'row',
+        height: 68,
+        marginBottom: 10,
+        borderRadius: 12,
+        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0,
+        overflow: 'hidden',
     },
     countBubble: {
         backgroundColor: "#3B82F6",
@@ -1010,20 +1030,18 @@ const styles = StyleSheet.create({
         backgroundColor: '#ff5b52',
         justifyContent: 'center',
         alignItems: 'center',
-        width: 70,
-        height: 40,
-        borderRadius: 50,
-        marginVertical: 15,
+        width: 72,
+        height: '100%',
+        borderRadius: 0,
     },
 
     editButton: {
         backgroundColor: "#66ba69",
         justifyContent: 'center',
         alignItems: 'center',
-        width: 70,
-        height: 40,
-        borderRadius: 50,
-        marginVertical: 15,
+        width: 72,
+        height: '100%',
+        borderRadius: 0,
     },
 
     deleteText: {
@@ -1036,28 +1054,26 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
 
-    searchOverlayBackground: {
-        position: "absolute",
-        top: 0,
+    searchDropdown: {
+        position: 'absolute',
+        top: 45,
         left: 0,
         right: 0,
-        bottom: 0,
-        zIndex: 2999,
-    },
-    searchDropdown: {
-        position: "absolute",
-        top: 165,
-        left: 20,
-        right: 20,
         backgroundColor: "#fff",
         borderRadius: 16,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        borderWidth: 1,
+        borderColor: '#E8E8E8',
         paddingVertical: 8,
+        maxHeight: 220,
+        overflow: "hidden",
         shadowColor: "#000",
         shadowOpacity: 0.15,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 4 },
         elevation: 10,
-        zIndex: 3000,
+        zIndex: 5000,
     },
 
     searchResultItem: {
