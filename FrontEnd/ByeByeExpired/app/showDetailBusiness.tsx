@@ -1204,7 +1204,7 @@ const styles = StyleSheet.create({
 },
 
 confirmBox: {
-  width: '80%',
+  width: '90%',
   backgroundColor: '#fff',
   borderRadius: 20,
   padding: 25,
