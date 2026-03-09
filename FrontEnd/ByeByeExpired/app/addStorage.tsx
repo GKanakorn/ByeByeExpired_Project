@@ -27,6 +27,11 @@ const { width } = Dimensions.get('window');
 
 // Storage icons data with images
 const STORAGE_ICONS: { id: string; name: string; icon: ImageSourcePropType }[] = [
+  { id: 'freezer1', name: 'Freezer1', icon: require('../assets/images/snow1.png') },
+  { id: 'freezer2', name: 'Freezer2', icon: require('../assets/images/snow2.webp') },
+  { id: 'shelf', name: 'Shelf', icon: require('../assets/images/shel2.png') },
+  { id: 'fridge1', name: 'Fridge1', icon: require('../assets/images/fridge1.png') },
+  { id: 'can', name: 'Can', icon: require('../assets/images/can1.png') },
   { id: 'freezer', name: 'Freezer', icon: require('../assets/images/Freezer.png') },
   { id: 'cabinet', name: 'Cabinet', icon: require('../assets/images/can.png') },
   { id: 'fridge', name: 'Fridge', icon: require('../assets/images/fridge.png') },
@@ -36,7 +41,7 @@ const STORAGE_ICONS: { id: string; name: string; icon: ImageSourcePropType }[] =
 
 // Color options
 const COLORS = [
-  '#2C3E50', '#778899', '#E74C3C', '#9B59B6', '#3498DB',
+  '#2C3E50', '#E74C3C', '#9B59B6', '#3498DB',
   '#27AE60', '#F1C40F', '#E67E22', '#FFB6C1', '#FFEBCD'
 ];
 
