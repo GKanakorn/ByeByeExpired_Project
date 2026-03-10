@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -9,11 +9,11 @@ import { useCallback } from 'react';
 import { useLocation } from '../src/context/LocationContext';
 import { getProducts } from '../src/api/product.api';
 
-// Dashboard สำหรับแสดงสรุปข้อมูลวัตถุดิบที่ถูกทิ้ง พร้อม Bar Chart และ Pie Chart
-// ใช้สำหรับติดตามและวิเคราะห์ข้อมูลการสูญเสียวัตถุดิบรายเดือน
+// Dashboard for displaying discarded ingredient summary with Bar Chart and Pie Chart
+// Used for tracking and analyzing monthly ingredient loss data
 const { width } = Dimensions.get('window');
 
-const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 type Product = {
   id: string;
@@ -95,7 +95,7 @@ const PieChart = ({ pieData, totalPieValue }: { pieData: Array<{ name: string; v
       </Svg>
       <View style={styles.pieChartCenter}>
         <Text style={styles.pieChartTotal}>{totalPieValue}</Text>
-        <Text style={styles.pieChartUnit}>บาท</Text>
+        <Text style={styles.pieChartUnit}>THB</Text>
       </View>
     </View>
   );
@@ -251,10 +251,10 @@ export default function LossDashboard() {
             style={styles.backButton}
             onPress={() => router.push('/overview')}
           >
-            <Ionicons name="chevron-back" size={26} color="#6366F1" />
+            <Ionicons name="chevron-back" size={28} color="#6366F1" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Dashboard</Text>
-          <View style={{ width: 44 }} />
+          <View style={{ width: 28 }} />
         </View>
 
         {/* App Icon */}
@@ -271,53 +271,136 @@ export default function LossDashboard() {
 
         {/* Title with Month Picker */}
         <View style={styles.titleRow}>
-          <Text style={styles.mainTitle}>สรุปข้อมูลวัตถุดิบที่ถูกทิ้ง</Text>
-          <TouchableOpacity 
-            style={styles.monthPicker}
-            onPress={() => setShowMonthPicker(!showMonthPicker)}
-          >
-            <Text style={styles.monthText}>
-              {filterType === 'year' ? 'ในปีนี้' : `เดือน ${months[selectedMonthIndex]}`}
-            </Text>
-            <Ionicons 
-              name={showMonthPicker ? "chevron-up" : "chevron-down"} 
-              size={16} 
-              color="#6B7280" 
-            />
-          </TouchableOpacity>
+          <Text style={styles.mainTitle}>Discarded Ingredients Summary</Text>
+          <View style={styles.monthPickerWrapper}>
+            <TouchableOpacity 
+              style={styles.monthPicker}
+              onPress={() => setShowMonthPicker(!showMonthPicker)}
+            >
+              <Text style={styles.monthText}>
+                {filterType === 'year' ? 'This Year' : `${months[selectedMonthIndex]}`}
+              </Text>
+              <Ionicons 
+                name={showMonthPicker ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color="#6B7280" 
+              />
+            </TouchableOpacity>
+
+            {/* Floating Dropdown */}
+            {showMonthPicker && (
+              <View style={styles.monthDropdown}>
+                <View style={styles.dropdownArrow} />
+                <Text style={styles.dropdownTitle}>Select Period</Text>
+                
+                {/* Row 1: This Year */}
+                <View style={styles.monthRow}>
+                  <TouchableOpacity
+                    style={[styles.monthOption, styles.thisYearOption, filterType === 'year' && styles.monthOptionActive]}
+                    onPress={() => {
+                      setFilterType('year');
+                      setShowMonthPicker(false);
+                    }}
+                  >
+                    <Text style={[styles.monthOptionText, filterType === 'year' && styles.monthOptionTextActive]}>
+                      This Year
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Row 2: Jan Feb Mar */}
+                <View style={styles.monthRow}>
+                  {[0, 1, 2].map((i) => (
+                    <TouchableOpacity
+                      key={months[i]}
+                      style={[styles.monthOption, filterType === 'month' && selectedMonthIndex === i && styles.monthOptionActive]}
+                      onPress={() => {
+                        setFilterType('month');
+                        setSelectedMonthIndex(i);
+                        setShowMonthPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.monthOptionText, filterType === 'month' && selectedMonthIndex === i && styles.monthOptionTextActive]}>
+                        {months[i]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Row 3: Apr May Jun */}
+                <View style={styles.monthRow}>
+                  {[3, 4, 5].map((i) => (
+                    <TouchableOpacity
+                      key={months[i]}
+                      style={[styles.monthOption, filterType === 'month' && selectedMonthIndex === i && styles.monthOptionActive]}
+                      onPress={() => {
+                        setFilterType('month');
+                        setSelectedMonthIndex(i);
+                        setShowMonthPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.monthOptionText, filterType === 'month' && selectedMonthIndex === i && styles.monthOptionTextActive]}>
+                        {months[i]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Row 4: Jul Aug Sep */}
+                <View style={styles.monthRow}>
+                  {[6, 7, 8].map((i) => (
+                    <TouchableOpacity
+                      key={months[i]}
+                      style={[styles.monthOption, filterType === 'month' && selectedMonthIndex === i && styles.monthOptionActive]}
+                      onPress={() => {
+                        setFilterType('month');
+                        setSelectedMonthIndex(i);
+                        setShowMonthPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.monthOptionText, filterType === 'month' && selectedMonthIndex === i && styles.monthOptionTextActive]}>
+                        {months[i]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Row 5: Oct Nov Dec */}
+                <View style={styles.monthRow}>
+                  {[9, 10, 11].map((i) => (
+                    <TouchableOpacity
+                      key={months[i]}
+                      style={[styles.monthOption, filterType === 'month' && selectedMonthIndex === i && styles.monthOptionActive]}
+                      onPress={() => {
+                        setFilterType('month');
+                        setSelectedMonthIndex(i);
+                        setShowMonthPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.monthOptionText, filterType === 'month' && selectedMonthIndex === i && styles.monthOptionTextActive]}>
+                        {months[i]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Month Picker Dropdown */}
+        {/* Dropdown Backdrop */}
         {showMonthPicker && (
-          <View style={styles.monthDropdown}>
-            <TouchableOpacity
-              style={[styles.monthOption, filterType === 'year' && styles.monthOptionActive]}
-              onPress={() => {
-                setFilterType('year');
-                setShowMonthPicker(false);
-              }}
-            >
-              <Text style={[styles.monthOptionText, filterType === 'year' && styles.monthOptionTextActive]}>
-                ในปีนี้
-              </Text>
-            </TouchableOpacity>
-            {months.map((month, index) => (
-              <TouchableOpacity
-                key={month}
-                style={[styles.monthOption, filterType === 'month' && selectedMonthIndex === index && styles.monthOptionActive]}
-                onPress={() => {
-                  setFilterType('month');
-                  setSelectedMonthIndex(index);
-                  setShowMonthPicker(false);
-                }}
-              >
-                <Text style={[styles.monthOptionText, filterType === 'month' && selectedMonthIndex === index && styles.monthOptionTextActive]}>
-                  {month}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableWithoutFeedback onPress={() => setShowMonthPicker(false)}>
+            <View style={styles.dropdownBackdrop} />
+          </TouchableWithoutFeedback>
         )}
+
+        {/* ScrollView for content below title */}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
 
         {/* Summary Cards */}
         <View style={styles.section}>
@@ -328,11 +411,11 @@ export default function LossDashboard() {
                 colors={['#F3E8FF', '#EDE9FE']}
                 style={styles.summaryCardInner}
               >
-                <View style={styles.summaryTopRow}>
-                  <Ionicons name="cube-outline" size={22} color="#8B5CF6" />
-                  <Text style={styles.summaryLabel}>ของที่หมดอายุทั้งหมด</Text>
+                <View style={styles.summaryIconRow}>
+                  <Ionicons name="cube-outline" size={24} color="#8B5CF6" />
+                  <Text style={styles.summaryLabel}>Total Expired Items</Text>
                 </View>
-                <Text style={styles.summaryValue}>{totalExpiredQuantity} <Text style={styles.summaryUnit}>ชิ้น</Text></Text>
+                <Text style={styles.summaryValue}>{totalExpiredQuantity} <Text style={styles.summaryUnit}>pcs</Text></Text>
               </LinearGradient>
             </View>
             <View style={styles.summaryCard}>
@@ -340,16 +423,16 @@ export default function LossDashboard() {
                 colors={['#FCE7F3', '#FDF2F8']}
                 style={styles.summaryCardInner}
               >
-                <View style={styles.summaryTopRow}>
-                  <Ionicons name="wallet-outline" size={22} color="#EC4899" />
-                  <Text style={styles.summaryLabel}>รวมมูลค่าความสูญเสีย</Text>
+                <View style={styles.summaryIconRow}>
+                  <Ionicons name="wallet-outline" size={24} color="#EC4899" />
+                  <Text style={styles.summaryLabel}>Total Loss Value</Text>
                 </View>
-                <Text style={styles.summaryValuePink}>{totalLoss} <Text style={styles.summaryUnit}>บาท</Text></Text>
+                <Text style={styles.summaryValuePink}>{totalLoss} <Text style={styles.summaryUnit}>THB</Text></Text>
               </LinearGradient>
             </View>
           </View>
           {!isBusiness && (
-            <Text style={styles.infoText}>Dashboard นี้คำนวณเฉพาะ Business location</Text>
+            <Text style={styles.infoText}>This dashboard is for Business locations only</Text>
           )}
         </View>
 
@@ -358,10 +441,10 @@ export default function LossDashboard() {
           <Text style={styles.sectionTitle}>Bar Chart</Text>
           <View style={styles.chartCard}>
             <View style={styles.barChartHeader}>
-              <Text style={styles.barChartLabel}>วันที่</Text>
-              <Text style={styles.barChartLabel}>เงินที่เสีย (บาท)</Text>
+              <Text style={styles.barChartLabel}>Date</Text>
+              <Text style={styles.barChartLabel}>Loss (THB)</Text>
             </View>
-            {barData.length === 0 && <Text style={styles.infoText}>ไม่มีข้อมูลหมดอายุในเดือนนี้</Text>}
+            {barData.length === 0 && <Text style={styles.infoText}>No expired data this month</Text>}
             {barData.map((item, index) => (
               <View key={index} style={styles.barRow}>
                 <Text style={styles.barDateLabel}>{item.date}</Text>
@@ -381,20 +464,20 @@ export default function LossDashboard() {
 
         {/* Pie Chart Section */}
         <View style={styles.sectionLast}>
-          <Text style={styles.sectionTitle}>Top 5 Category ที่หมดอายุ</Text>
+          <Text style={styles.sectionTitle}>Top 5 Expired Categories</Text>
           <View style={styles.chartCard}>
             <View style={styles.pieContainer}>
               <PieChart pieData={pieData} totalPieValue={totalPieValue} />
               
               {/* Legend */}
               <View style={styles.legendContainer}>
-                {pieData.length === 0 && <Text style={styles.infoText}>ไม่มีข้อมูลหมวดหมู่</Text>}
+                {pieData.length === 0 && <Text style={styles.infoText}>No category data</Text>}
                 {pieData.map((item, index) => (
                   <View key={index} style={styles.legendItem}>
                     <Text style={styles.legendNumber}>{index + 1}.</Text>
                     <View style={[styles.legendDot, { backgroundColor: item.color }]} />
                     <Text style={styles.legendName}>{item.name}</Text>
-                    <Text style={styles.legendValue}>{item.value} บาท</Text>
+                    <Text style={styles.legendValue}>{item.value} THB</Text>
                   </View>
                 ))}
               </View>
@@ -423,12 +506,13 @@ export default function LossDashboard() {
                 end={{ x: 1, y: 0 }}
                 style={styles.viewAllGradient}
               >
-                <Text style={styles.viewAllText}>ดูทั้งหมด</Text>
+                <Text style={styles.viewAllText}>View All</Text>
                 <Ionicons name="arrow-forward" size={16} color="#FFF" />
               </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
+        </ScrollView>
       </View>
     </LinearGradient>
   );
@@ -451,17 +535,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
-    width: 44,
+    width: 28,
     height: 44,
-    borderRadius: 14,
-    backgroundColor: '#FFF',
     justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    alignItems: 'flex-start',
   },
   headerTitle: {
     fontSize: 24,
@@ -515,29 +592,68 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6B7280',
   },
+  monthPickerWrapper: {
+    position: 'relative',
+    zIndex: 100,
+  },
+  dropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
+  },
   monthDropdown: {
     position: 'absolute',
-    top: 200,
-    right: 20,
-    zIndex: 100,
+    top: 48,
+    right: -20,
     backgroundColor: '#FFF',
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 18,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    width: 260,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+    zIndex: 101,
+  },
+  dropdownTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  dropdownArrow: {
+    position: 'absolute',
+    top: -8,
+    right: 40,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#FFF',
+  },
+  monthRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-    width: width - 40,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
   monthOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
+    width: 68,
+    paddingVertical: 12,
+    borderRadius: 12,
     backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  thisYearOption: {
+    width: '100%',
   },
   monthOptionActive: {
     backgroundColor: '#8B5CF6',
@@ -569,40 +685,47 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1,
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   summaryCardInner: {
-    padding: 18,
-    borderRadius: 18,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    minHeight: 110,
+    justifyContent: 'center',
   },
-  summaryTopRow: {
+  summaryIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 12,
   },
   summaryLabel: {
     fontSize: 13,
+    fontWeight: '500',
     color: '#6B7280',
   },
   summaryValue: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
     color: '#8B5CF6',
+    textAlign: 'center',
   },
   summaryValuePink: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
     color: '#EC4899',
+    textAlign: 'center',
   },
   summaryUnit: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '500',
   },
   chartCard: {
@@ -733,5 +856,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9CA3AF',
     marginTop: 8,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 30,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#374151',
+    flex: 1,
   },
 });
