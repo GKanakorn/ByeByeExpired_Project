@@ -250,7 +250,7 @@ export default function ScanBarcodeScreen() {
   if (hasPermission === false) {
     return (
       <View style={styles.fullScreenContainer}>
-        <Text style={{ color: 'white' }}>ไม่อนุญาตให้ใช้กล้อง</Text>
+        <Text style={{ color: 'white' }}>Camera access is not allowed.</Text>
       </View>
     )
   }
@@ -309,7 +309,7 @@ export default function ScanBarcodeScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>
-          {mode === 'add' ? 'สแกนเพื่อเพิ่มสินค้า' : 'สแกนเพื่อลบสินค้า'}
+          {mode === 'add' ? 'Scan to add product' : 'Scan to remove product'}
         </Text>
         <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
           <Ionicons name="close" size={24} color="white" />
@@ -357,7 +357,7 @@ export default function ScanBarcodeScreen() {
             {loading && (
               <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="large" color="#9B59B6" />
-                <Text style={styles.loadingText}>กำลังตรวจสอบ Barcode…</Text>
+                <Text style={styles.loadingText}>Checking Barcode…</Text>
               </View>
             )}
           </View>
@@ -366,7 +366,7 @@ export default function ScanBarcodeScreen() {
         {/* Instruction Text */}
         <View style={styles.instructionContainer}>
           <Text style={styles.instructionText}>
-            วาง Barcode ไว้ตรงกลางกรอบเพื่อสแกน
+            Place the barcode in the center of the frame to scan. Make sure it's well-lit and clear.
           </Text>
         </View>
       </View>
