@@ -42,7 +42,7 @@ const RegisterScreen = () => {
 
     Alert.alert(
       "Success",
-      "Registration successful! กรุณายืนยันอีเมล",
+      "Registration successful! Please verify your email",
       [
         {
           text: "OK",
@@ -60,7 +60,7 @@ const RegisterScreen = () => {
     if (errorMessage.includes('already') || errorMessage.includes('exist') || errorMessage.includes('registered')) {
       Alert.alert(
         "Email Already Used",
-        "อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ"
+        "This email is already registered. Please use a different email or login"
       )
     } else {
       Alert.alert("Register failed", err.message)
@@ -93,7 +93,7 @@ const RegisterScreen = () => {
         const fragment = result.url.split('#')[1];
 
         if (!fragment) {
-          Alert.alert('Auth Error', 'ไม่พบ fragment จาก OAuth');
+          Alert.alert('Auth Error', 'Fragment not found from OAuth');
           return;
         }
 
@@ -103,7 +103,7 @@ const RegisterScreen = () => {
         const refresh_token = params.get('refresh_token');
 
         if (!access_token || !refresh_token) {
-          Alert.alert('Auth Error', 'ไม่พบ token จาก OAuth');
+          Alert.alert('Auth Error', 'Token not found from OAuth');
           return;
         }
 

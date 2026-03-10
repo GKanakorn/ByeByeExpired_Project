@@ -81,6 +81,32 @@ export async function deleteLocation(userId: string, locationId: string) {
 
   return { success: true }
 }
+
+export async function updateLocation(userId: string, locationId: string, data: {
+  name?: string
+}) {
+  const { data: location } = await supabaseAdmin
+    .from('locations')
+    .select('owner_id')
+    .eq('id', locationId)
+    .single()
+
+  if (!location || location.owner_id !== userId) {
+    throw new Error('Only owner can update this location')
+  }
+
+  const { data: updated, error } = await supabaseAdmin
+    .from('locations')
+    .update(data)
+    .eq('id', locationId)
+    .select()
+    .single()
+
+  if (error) throw error
+
+  return updated
+}
+
 export async function getMyLocations(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("location_members")

@@ -97,7 +97,7 @@ export default function AddSupplierScreen() {
 
   const handleSave = async () => {
     if (!form.name || !form.phone || !form.address) {
-      Alert.alert('กรอกข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลที่มี *')
+      Alert.alert('Incomplete Data', 'Please fill in all required fields (*)')
       return
     }
 
@@ -130,12 +130,12 @@ export default function AddSupplierScreen() {
         image_url: imageUrl,
       }, (params.locationId as string) || undefined)
 
-      Alert.alert('สำเร็จ', 'เพิ่ม Supplier เรียบร้อย')
+      Alert.alert('Success', 'Supplier added successfully')
       router.back()
 
     } catch (error: any) {
       console.log(error.message)
-      Alert.alert('เกิดข้อผิดพลาด', error.message ?? 'ไม่สามารถบันทึกข้อมูลได้')
+      Alert.alert('Error Occurred', error.message ?? 'Unable to save data')
     } finally {
       setUploading(false)
     }
@@ -174,24 +174,24 @@ export default function AddSupplierScreen() {
                 )}
               </View>
               <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
-                <Text style={styles.addPhotoText}>เพิ่มรูปภาพ</Text>
+                <Text style={styles.addPhotoText}>Add Photo</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.card}>
               <Input
-                label="ชื่อร้าน / บริษัท *"
+                label="Store / Company Name *"
                 value={form.name}
                 onChangeText={(value) => handleChange('name', value)}
               />
               <Input
-                label="เบอร์โทรศัพท์ *"
+                label="Phone Number *"
                 keyboardType="numeric"
                 value={form.phone}
                 onChangeText={(value) => handleChange('phone', value)}
               />
               <Input
-                label="ที่อยู่ *"
+                label="Address *"
                 value={form.address}
                 onChangeText={(value) => handleChange('address', value)}
               />
@@ -199,17 +199,17 @@ export default function AddSupplierScreen() {
 
             <View style={styles.card}>
               <Input
-                label="อีเมล"
+                label="Email"
                 value={form.email}
                 onChangeText={(value) => handleChange('email', value)}
               />
               <Input
-                label="ชื่อผู้ติดต่อ"
+                label="Contact Name"
                 value={form.contact}
                 onChangeText={(value) => handleChange('contact', value)}
               />
               <Input
-                label="หมายเหตุ"
+                label="Note"
                 value={form.note}
                 onChangeText={(value) => handleChange('note', value)}
               />

@@ -36,7 +36,7 @@ export default function LoginScreen() {
       if (errorMessage.includes('email not confirmed') || errorMessage.includes('confirm') || errorMessage.includes('verify')) {
         Alert.alert(
           'Email Not Confirmed',
-          'กรุณายืนยันอีเมลของคุณก่อนเข้าสู่ระบบ',
+          'Please verify your email before logging in',
           [
             {
               text: 'OK',
@@ -81,7 +81,7 @@ export default function LoginScreen() {
         const fragment = result.url.split('#')[1];
 
         if (!fragment) {
-          Alert.alert('Auth Error', 'ไม่พบ fragment จาก OAuth');
+          Alert.alert('Auth Error', 'Fragment not found from OAuth');
           return;
         }
 
@@ -91,7 +91,7 @@ export default function LoginScreen() {
         const refresh_token = params.get('refresh_token');
 
         if (!access_token || !refresh_token) {
-          Alert.alert('Auth Error', 'ไม่พบ token จาก OAuth');
+          Alert.alert('Auth Error', 'Token not found from OAuth');
           return;
         }
 

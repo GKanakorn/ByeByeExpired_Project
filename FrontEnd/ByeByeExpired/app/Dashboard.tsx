@@ -249,7 +249,7 @@ export default function LossDashboard() {
         <View style={styles.headerRow}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => router.push('/overview')}
+            onPress={() => router.back()}
           >
             <Ionicons name="chevron-back" size={28} color="#6366F1" />
           </TouchableOpacity>

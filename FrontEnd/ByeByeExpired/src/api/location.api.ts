@@ -46,6 +46,26 @@ export async function deleteLocation(token: string, locationId: string) {
   return res.json()
 }
 
+export async function updateLocation(token: string, locationId: string, data: {
+  name?: string
+}) {
+  const res = await fetch(`${API_URL}/api/locations/${locationId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Update location failed')
+  }
+
+  return res.json()
+}
+
 export async function getMyLocations(token: string): Promise<Location[]> {
   const res = await fetch(`${API_URL}/api/locations`, {
     headers: {

@@ -69,6 +69,17 @@ export async function register({
   password: string
   fullName: string
 }) {
+  // Check if email already exists in profiles
+  const { data: existingProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('email', email.toLowerCase())
+    .single()
+
+  if (existingProfile) {
+    throw new Error('Email already registered. Please use a different email or login.')
+  }
+
   const { data, error } = await supabaseAnon.auth.signUp({
     email,
     password,

@@ -20,7 +20,7 @@ import {
     deleteMember,
     inviteMemberToLocation,
 } from "../src/api/manageLocation.api";
-import { getMyLocations } from "../src/api/location.api";
+import { getMyLocations, updateLocation } from "../src/api/location.api";
 import { supabase } from "@/src/supabase";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -47,6 +47,10 @@ export default function ManageLocationScreen() {
     const [inviteVisible, setInviteVisible] = useState(false);
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviteRole, setInviteRole] = useState<Member["role"]>("member");
+
+    const [editNameVisible, setEditNameVisible] = useState(false);
+    const [editNameText, setEditNameText] = useState("");
+    const [updatingName, setUpdatingName] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -148,6 +152,34 @@ export default function ManageLocationScreen() {
         }
     };
 
+    const handleUpdateName = async () => {
+        if (!editNameText.trim()) {
+            Alert.alert("Error", "Location name cannot be empty");
+            return;
+        }
+
+        try {
+            setUpdatingName(true);
+            const { data: session } = await supabase.auth.getSession();
+            const token = session?.session?.access_token;
+
+            if (!token) {
+                Alert.alert("Error", "Token not found");
+                return;
+            }
+
+            await updateLocation(token, locationId, { name: editNameText.trim() });
+            setLocationName(editNameText.trim());
+            setEditNameVisible(false);
+            setEditNameText("");
+            Alert.alert("Success", "Location name updated");
+        } catch (err: any) {
+            Alert.alert("Error", err.message || "Failed to update location name");
+        } finally {
+            setUpdatingName(false);
+        }
+    };
+
     const renderRoleBadge = (role: Member["role"]) => {
         const map = {
             owner: { bg: "#FFC107", label: "Owner" },
@@ -220,7 +252,20 @@ export default function ManageLocationScreen() {
                           />
                         </View>
                     )}
-                    <Text style={styles.title}>{locationName}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                        <Text style={styles.title}>{locationName}</Text>
+                        {isOwner && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setEditNameText(locationName);
+                                    setEditNameVisible(true);
+                                }}
+                                style={{ marginLeft: 10 }}
+                            >
+                                <Ionicons name="pencil" size={20} color="#5A6AE0" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                     <Text style={styles.subtitle}>Manage members in this location</Text>
                     {isOwner && (
                         <TouchableOpacity
@@ -302,6 +347,42 @@ export default function ManageLocationScreen() {
                     </View>
                 </Modal>
 
+                <Modal visible={editNameVisible} transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalBox}>
+                            <Text style={styles.modalTitle}>Edit Location Name</Text>
+
+                            <TextInput
+                                placeholder="Enter new location name"
+                                value={editNameText}
+                                onChangeText={setEditNameText}
+                                style={styles.input}
+                                editable={!updatingName}
+                            />
+
+                            <View style={styles.modalRow}>
+                                <TouchableOpacity 
+                                    onPress={() => {
+                                        setEditNameVisible(false);
+                                        setEditNameText("");
+                                    }}
+                                    disabled={updatingName}
+                                >
+                                    <Text style={{ color: updatingName ? "#ccc" : "#999" }}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    onPress={handleUpdateName}
+                                    disabled={updatingName}
+                                >
+                                    <Text style={{ color: updatingName ? "#ccc" : "#6C63FF", fontWeight: "600" }}>
+                                        {updatingName ? "Updating..." : "Update"}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
 
 
             </SafeAreaView>

@@ -109,50 +109,50 @@ export default function DeleteProduct() {
   });
 
   const handleDelete = async () => {
-  if (!selectedProduct) return;
+    if (!selectedProduct) return;
 
-  try {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return;
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
 
-    const res = await fetch(
-      `${API_URL}/products/${selectedProduct.id}/delete`,
-      {
-        method: "PATCH", // ใช้ PATCH เพราะเราลด quantity
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          quantity: quantity,
-        }),
+      const res = await fetch(
+        `${API_URL}/products/${selectedProduct.id}/delete`,
+        {
+          method: "PATCH", // ใช้ PATCH เพราะเราลด quantity
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            quantity: quantity,
+          }),
+        }
+      );
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.message || "Delete failed");
       }
-    );
 
-    const result = await res.json();
-    if (!res.ok) {
-      throw new Error(result.message || "Delete failed");
+      // 🔥 รีเฟรช list ใหม่
+      setProducts((prev) =>
+        prev
+          .map((item) =>
+            item.id === selectedProduct.id
+              ? { ...item, quantity: item.quantity - quantity }
+              : item
+          )
+          .filter((item) => item.quantity > 0)
+      );
+
+      setConfirmModal(false);
+      setQuantity(1);
+
+    } catch (err) {
+      console.log("DELETE ERROR", err);
     }
-
-    // 🔥 รีเฟรช list ใหม่
-    setProducts((prev) =>
-      prev
-        .map((item) =>
-          item.id === selectedProduct.id
-            ? { ...item, quantity: item.quantity - quantity }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
-
-    setConfirmModal(false);
-    setQuantity(1);
-
-  } catch (err) {
-    console.log("DELETE ERROR", err);
-  }
-};
+  };
 
   return (
     <LinearGradient
@@ -163,7 +163,10 @@ export default function DeleteProduct() {
     >
       {/* ===== MAIN PAGE ===== */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/overview')}>
+        <TouchableOpacity onPress={() => {
+          router.back()
+          router.back()
+        }}>
           <Ionicons name="chevron-back" size={34} color="#434bdfff" />
         </TouchableOpacity>
         <Text style={styles.title}>DeleteProduct</Text>
@@ -361,7 +364,10 @@ export default function DeleteProduct() {
 
               <TouchableOpacity
                 style={styles.confirmBtn}
-                onPress={handleDelete}
+                onPress={() => {
+                  handleDelete();
+                  router.back();
+                }}
               >
                 <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>Confirm</Text>
               </TouchableOpacity>
@@ -493,7 +499,7 @@ const styles = StyleSheet.create({
   },
   rowBtn: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "center",
     marginTop: 35,
     width: "100%",
   },

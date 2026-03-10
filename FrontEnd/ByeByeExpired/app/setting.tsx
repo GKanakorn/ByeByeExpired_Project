@@ -12,11 +12,13 @@ import {
     ActivityIndicator,
     ScrollView,
 } from "react-native";
+import TextTicker from 'react-native-text-ticker';
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { supabase } from '../src/supabase'
 import { getMyLocations, deleteLocation, Location } from '../src/api/location.api'
+import { getManageLocation } from '../src/api/manageLocation.api'
 import { useLocation } from '../src/context/LocationContext'
 import { getUserNotifications, LocationNotifications, NotificationItem } from '../src/api/notification.api'
 
@@ -135,12 +137,12 @@ export default function SettingScreen() {
                     <FlatList
                         data={[
                             ...(locations ?? []),
-                            { 
-                                id: "add", 
-                                name: "", 
-                                type: "personal" as const, 
-                                owner_id: "", 
-                                role: "member" as const 
+                            {
+                                id: "add",
+                                name: "",
+                                type: "personal" as const,
+                                owner_id: "",
+                                role: "member" as const
                             }
                         ]}
                         horizontal
@@ -176,43 +178,64 @@ export default function SettingScreen() {
                                     ]}
                                 >
                                     {item.role === "owner" && (
-                                    <TouchableOpacity
-                                        style={styles.closeBtn}
-                                        onPress={() => {
-                                            Alert.alert(
-                                                'Confirm Deletion',
-                                                'Are you sure you want to delete this location?',
-                                                [
-                                                    { text: 'Cancel', style: 'cancel' },
-                                                    {
-                                                        text: 'Delete',
-                                                        style: 'destructive',
-                                                        onPress: async () => {
-                                                            try {
-                                                                setDeletingId(item.id)
-                                                                const { data: session } = await supabase.auth.getSession()
-                                                                const token = session?.session?.access_token
-                                                                if (!token) return
+                                        <TouchableOpacity
+                                            style={styles.closeBtn}
+                                            onPress={async () => {
+                                                try {
+                                                    const { data: session } = await supabase.auth.getSession()
+                                                    const token = session?.session?.access_token
+                                                    if (!token) return
 
-                                                                await deleteLocation(token, item.id)
+                                                    const manageData = await getManageLocation(token, item.id)
+                                                    const members = Array.isArray(manageData?.members) ? manageData.members : []
+                                                    const hasOtherMembers = members.some((m: any) => m.role !== "owner")
 
-                                                                setLocations(prev => prev.filter(l => l.id !== item.id))
-                                                                if (selectedLocationId === item.id) {
-                                                                    setSelectedLocationId(null)
+                                                    if (hasOtherMembers) {
+                                                        Alert.alert(
+                                                            'Cannot Delete Location',
+                                                            'Please remove all members before deleting this location.'
+                                                        )
+                                                        return
+                                                    }
+                                                } catch (e: any) {
+                                                    Alert.alert('Unable to verify members', e?.message || 'Please try again')
+                                                    return
+                                                }
+
+                                                Alert.alert(
+                                                    'Confirm Deletion',
+                                                    'Are you sure you want to delete this location?',
+                                                    [
+                                                        { text: 'Cancel', style: 'cancel' },
+                                                        {
+                                                            text: 'Delete',
+                                                            style: 'destructive',
+                                                            onPress: async () => {
+                                                                try {
+                                                                    setDeletingId(item.id)
+                                                                    const { data: session } = await supabase.auth.getSession()
+                                                                    const token = session?.session?.access_token
+                                                                    if (!token) return
+
+                                                                    await deleteLocation(token, item.id)
+
+                                                                    setLocations(prev => prev.filter(l => l.id !== item.id))
+                                                                    if (selectedLocationId === item.id) {
+                                                                        setSelectedLocationId(null)
+                                                                    }
+                                                                } catch (e: any) {
+                                                                    Alert.alert('Delete location failed', e?.message || 'Unable to delete location')
+                                                                } finally {
+                                                                    setDeletingId(null)
                                                                 }
-                                                            } catch (e: any) {
-                                                                Alert.alert('Delete location failed', e?.message || 'Unable to delete location')
-                                                            } finally {
-                                                                setDeletingId(null)
                                                             }
                                                         }
-                                                    }
-                                                ]
-                                            )
-                                        }}
-                                    >
-                                        <Ionicons name="close" size={16} color="#999" />
-                                    </TouchableOpacity>
+                                                    ]
+                                                )
+                                            }}
+                                        >
+                                            <Ionicons name="close" size={16} color="#999" />
+                                        </TouchableOpacity>
                                     )}
                                     {deletingId === item.id && (
                                         <View style={styles.loadingOverlay}>
@@ -228,14 +251,19 @@ export default function SettingScreen() {
                                         style={styles.cardImage}
                                     />
 
-                                    <Text
+                                    <TextTicker
                                         style={[
                                             styles.cardTitle,
                                             !isPersonal && { color: "#E46B2C" },
                                         ]}
+                                        duration={6000}
+                                        loop
+                                        bounce={false}
+                                        repeatSpacer={30}
+                                        marqueeDelay={1000}
                                     >
                                         {item.name}
-                                    </Text>
+                                    </TextTicker>
 
                                     <Text style={styles.cardSub}>
                                         Type: {isPersonal ? "Personal" : "Business"}
@@ -261,7 +289,7 @@ export default function SettingScreen() {
                                             (navigation.navigate as any)("manageLocation", { locationId: item.id });
                                         }}
                                     >
-                                        <Text style={styles.manageText}>Manage Users</Text>
+                                        <Text style={styles.manageText}>Manage Location</Text>
                                     </TouchableOpacity>
                                 </View>
                             );
@@ -277,7 +305,7 @@ export default function SettingScreen() {
                 )}
 
                 {/* Notifications - Vertical Scroll */}
-                <ScrollView 
+                <ScrollView
                     style={styles.notificationsScrollView}
                     showsVerticalScrollIndicator={false}
                 >
@@ -287,44 +315,44 @@ export default function SettingScreen() {
                                 const mergedItems = mergeNotifications(location.notifications || [])
 
                                 return (
-                                <View key={location.locationId} style={styles.locationNotifications}>
-                                    <View style={styles.locationHeader}>
-                                        <Text style={styles.locationName}>{location.locationName}</Text>
-                                        <View style={styles.locationCountBadge}>
-                                            <Text style={styles.locationCountText}>{mergedItems.length}</Text>
-                                        </View>
-                                    </View>
-                                    {mergedItems.map((notif, idx) => (
-                                        <View key={idx} style={styles.notificationItem}>
-                                            <View style={styles.notificationContent}>
-                                                {notif.imageUrl && (
-                                                    <Image 
-                                                        source={{ uri: notif.imageUrl }}
-                                                        style={styles.notifImage}
-                                                    />
-                                                )}
-                                                <View style={{ flex: 1 }}>
-                                                    <Text style={styles.notifName} numberOfLines={1}>{notif.name}</Text>
-                                                    <Text style={styles.notifType}>
-                                                        {notif.alerts.map((alert) =>
-                                                            alert.type === 'expiring' ? '🕐 Expiring Soon' : '📉 Out of Stock'
-                                                        ).join(' • ')}
-                                                    </Text>
-                                                    {notif.alerts.some((alert) => alert.type === 'expiring') && (
-                                                        <Text style={styles.notifDate}>
-                                                            {notif.daysUntilExpiry === 0 
-                                                                ? 'Expires today!' 
-                                                                : `Expires in ${notif.daysUntilExpiry} day(s)`}
-                                                        </Text>
-                                                    )}
-                                                    {notif.alerts.some((alert) => alert.type === 'low_stock') && (
-                                                        <Text style={styles.notifDate}>Only {notif.quantity} left</Text>
-                                                    )}
-                                                </View>
+                                    <View key={location.locationId} style={styles.locationNotifications}>
+                                        <View style={styles.locationHeader}>
+                                            <Text style={styles.locationName}>{location.locationName}</Text>
+                                            <View style={styles.locationCountBadge}>
+                                                <Text style={styles.locationCountText}>{mergedItems.length}</Text>
                                             </View>
                                         </View>
-                                    ))}
-                                </View>
+                                        {mergedItems.map((notif, idx) => (
+                                            <View key={idx} style={styles.notificationItem}>
+                                                <View style={styles.notificationContent}>
+                                                    {notif.imageUrl && (
+                                                        <Image
+                                                            source={{ uri: notif.imageUrl }}
+                                                            style={styles.notifImage}
+                                                        />
+                                                    )}
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={styles.notifName} numberOfLines={1}>{notif.name}</Text>
+                                                        <Text style={styles.notifType}>
+                                                            {notif.alerts.map((alert) =>
+                                                                alert.type === 'expiring' ? '🕐 Expiring Soon' : '📉 Out of Stock'
+                                                            ).join(' • ')}
+                                                        </Text>
+                                                        {notif.alerts.some((alert) => alert.type === 'expiring') && (
+                                                            <Text style={styles.notifDate}>
+                                                                {notif.daysUntilExpiry === 0
+                                                                    ? 'Expires today!'
+                                                                    : `Expires in ${notif.daysUntilExpiry} day(s)`}
+                                                            </Text>
+                                                        )}
+                                                        {notif.alerts.some((alert) => alert.type === 'low_stock') && (
+                                                            <Text style={styles.notifDate}>Only {notif.quantity} left</Text>
+                                                        )}
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        ))}
+                                    </View>
                                 )
                             })}
                         </View>
@@ -349,7 +377,7 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#5A6AE0",
     },
-    
+
     // Cards Container - Fixed Height for Horizontal Scroll
     cardsContainer: {
         height: 230,
@@ -360,7 +388,7 @@ const styles = StyleSheet.create({
     notificationsScrollView: {
         flex: 1,
         paddingBottom: 20,
-    },    titleBox: {
+    }, titleBox: {
         alignItems: "center",
         marginTop: 30,
         marginBottom: 20,

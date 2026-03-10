@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { requireAuth } from '../middleware/auth.middleware'
-import { createLocation } from '../services/location.service'
+import { createLocation, updateLocation } from '../services/location.service'
 import { deleteLocation } from '../services/location.service'
 import { AuthRequest } from '../types/auth-request'
 import { supabaseAdmin } from '../supabase'
@@ -113,6 +113,24 @@ router.get(
     console.log('📍 LOCATIONS RESULT =', result)
 
     res.json(result)
+  }
+)
+
+router.put(
+  '/locations/:id',
+  requireAuth,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.id
+      const locationId = req.params.id as string
+
+      const updated = await updateLocation(userId, locationId, req.body)
+
+      res.json(updated)
+    } catch (err: any) {
+      console.error(err)
+      res.status(400).json({ message: err?.message || 'Cannot update location' })
+    }
   }
 )
 

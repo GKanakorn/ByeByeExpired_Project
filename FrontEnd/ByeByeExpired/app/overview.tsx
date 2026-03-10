@@ -93,7 +93,7 @@ export default function OverviewScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#F19BEA" />
-        <Text style={styles.text}>กำลังโหลดสถานที่...</Text>
+        <Text style={styles.text}>Loading locations...</Text>
       </View>
     )
   }

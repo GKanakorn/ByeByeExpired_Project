@@ -252,7 +252,7 @@ export default function StorageScreen() {
                 }}
                 scrollEnabled={false}
                 ListEmptyComponent={
-                  <Text style={styles.emptyText}>ไม่มีสินค้าในที่เก็บนี้</Text>
+                  <Text style={styles.emptyText}>No products in this storage</Text>
                 }
                 renderItem={({ item }) => {
                   const imageUrl =

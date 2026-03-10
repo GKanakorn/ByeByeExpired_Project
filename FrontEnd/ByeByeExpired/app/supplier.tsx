@@ -135,7 +135,7 @@ export default function SupplierScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.subtitleText}>ข้อมูลติดตัวผู้จำหน่ายวัตถุดิบ</Text>
+          <Text style={styles.subtitleText}>Supplier Contact Information</Text>
         </View>
 
         {/* Search Bar */}
