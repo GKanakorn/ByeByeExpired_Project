@@ -42,14 +42,14 @@ const STORAGE_ICONS: { id: string; name: string; icon: ImageSourcePropType }[] =
 // Color options
 const COLORS = [
   '#2C3E50', '#E74C3C', '#9B59B6', '#3498DB',
-  '#27AE60', '#F1C40F', '#E67E22', '#FFB6C1', '#FFEBCD'
+  '#27AE60', '#F1C40F', '#E67E22', '#FFB6C1', '#ffc46a'
 ];
 
 export default function AddStorageScreen() {
   const router = useRouter();
   const [storageName, setStorageName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('fridge');
-  const [selectedColor, setSelectedColor] = useState('#FFEBCD');
+  const [selectedColor, setSelectedColor] = useState('#ffc46a');
   const { currentLocation } = useLocation()
   const { storageId } = useLocalSearchParams();
 
