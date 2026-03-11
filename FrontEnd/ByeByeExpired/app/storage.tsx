@@ -255,7 +255,7 @@ export default function StorageScreen() {
                 contentContainerStyle={{
                   paddingBottom: 20,
                 }}
-                scrollEnabled={false}
+                scrollEnabled={true}
                 ListEmptyComponent={
                   <Text style={styles.emptyText}>No products in this storage</Text>
                 }
