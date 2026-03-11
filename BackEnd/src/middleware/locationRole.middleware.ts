@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../supabase'
 import { AuthRequest } from '../types/auth-request'
 
 export function requireLocationRole(
-  allowedRoles: Array<'owner' | 'admin' | 'member'>
+  allowedRoles: Array<'owner' | 'member'>
 ) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
@@ -15,8 +15,8 @@ export function requireLocationRole(
       (req.params as any).locationId ||
       (req.query as any).locationId ||
       (req.query as any).location_id ||
-      req.body.location_id ||
-      req.body.locationId
+      req.body?.location_id ||
+      req.body?.locationId
 
     // if we still don't have a location and there is an :id param
     // (used for products, etc.), fetch the record to determine
@@ -29,6 +29,16 @@ export function requireLocationRole(
         .single()
 
       locationId = record?.location_id
+    }
+
+    if (!locationId && req.params.storageId) {
+      const { data: storage } = await supabaseAdmin
+        .from('storages')
+        .select('location_id')
+        .eq('id', req.params.storageId)
+        .single()
+
+      locationId = storage?.location_id
     }
 
     if (!locationId) {
@@ -62,7 +72,10 @@ export function requireLocationRole(
       return res.status(403).json({ error: 'Not a member' })
     }
 
-    if (!allowedRoles.includes(member.role)) {
+    const normalizedRole =
+      member.role === 'owner' ? 'owner' : 'member'
+
+    if (!allowedRoles.includes(normalizedRole)) {
       return res.status(403).json({ error: 'Insufficient permission' })
     }
 

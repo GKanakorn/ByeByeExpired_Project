@@ -602,6 +602,13 @@ export default function ProfilePage() {
                               : item.deleted_by_profile?.full_name || 'Unknown'}
                           </Text>
                         </View>
+
+                        <View style={styles.detailItem}>
+                          <Ionicons name="location-outline" size={12} color="#7C3AED" />
+                          <Text style={styles.historyDetail} numberOfLines={1}>
+                            {item.location_name || 'Unknown Location'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
                   </View>

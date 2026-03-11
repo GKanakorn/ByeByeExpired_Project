@@ -18,6 +18,7 @@ import { getStorageDetail } from "../src/api/storage.api";
 import { getProducts } from "../src/api/product.api";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocation } from "../src/context/LocationContext";
+import { Colors } from "@/constants/theme";
 
 const TABS = [
   "All",
@@ -174,8 +175,8 @@ export default function StorageScreen() {
   return (
     <LinearGradient
       colors={[
-        "#ffffff",
         storage?.color || "#fdb6cd",
+        "#ffffff",
       ]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
@@ -185,8 +186,8 @@ export default function StorageScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={22} color={storage?.color || "#FE7EA9"} />
-            <Text style={[styles.backText, { color: storage?.color || "#FE7EA9" }]}>
+            <Ionicons name="chevron-back" size={22} color={"#ffffff"} />
+            <Text style={[styles.backText, { color: "#ffffff" }]}>
               OVERVIEW
             </Text>
           </TouchableOpacity>
@@ -195,14 +196,14 @@ export default function StorageScreen() {
         {/* Loading State */}
         {loading && (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={storage?.color || "#FE7EA9"} />
+            <ActivityIndicator size="large" color={"#ffffff"} />
           </View>
         )}
 
         {!loading && (
           <>
             {/* Title */}
-            <Text style={[styles.title, { color: storage?.color || "#7C3AED" }]}>
+            <Text style={[styles.title, { color: "#ffffff" }]}>
               {(storage?.name || "STORAGE").toUpperCase()}
             </Text>
 
@@ -221,14 +222,18 @@ export default function StorageScreen() {
                     styles.tabBtn,
                     activeTab === tab && {
                       ...styles.tabBtnActive,
-                      backgroundColor: storage?.color || "#7C3AED",
+                      backgroundColor: "#ffffff",
+                      borderColor: storage?.color || "#7C3AED"
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.tabText,
-                      activeTab === tab && styles.tabTextActive,
+                      activeTab === tab && {
+                        ...styles.tabTextActive,
+                        color: storage?.color || "#7C3AED",
+                      },
                     ]}
                   >
                     {tab}
@@ -252,7 +257,7 @@ export default function StorageScreen() {
                 }}
                 scrollEnabled={false}
                 ListEmptyComponent={
-                  <Text style={styles.emptyText}>ไม่มีสินค้าในที่เก็บนี้</Text>
+                  <Text style={styles.emptyText}>No products in this storage</Text>
                 }
                 renderItem={({ item }) => {
                   const imageUrl =
@@ -350,7 +355,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 28,
     justifyContent: "center",
-    backgroundColor: "#ff97b9",
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
@@ -359,7 +363,7 @@ const styles = StyleSheet.create({
 
   tabBtnActive: {
     backgroundColor: "#ffffff",
-    borderColor: "#FE7EA9",
+    borderColor: "#ffffff",
   },
   tabText: {
     fontSize: 12,
@@ -368,7 +372,7 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT_REGULAR,
   },
   tabTextActive: {
-    color: "#FE7EA9",
+    color: "#ffffff",
     fontWeight: FONT_WEIGHT_SEMIBOLD,
     fontFamily: FONT_FAMILY,
   },

@@ -49,11 +49,14 @@ type Location = {
   id: string
   name: string
   type: "personal" | "business"
-  role: "owner" | "admin" | "member"
+  role: "owner" | "member"
 }
 
 export default function ShowDetailPersonal() {
   const router = useRouter();
+  const { currentLocation } = useLocation()
+  const role = currentLocation?.role
+  const canManageStorage = role === 'owner'
 
   const {
     productId,
@@ -80,8 +83,6 @@ export default function ShowDetailPersonal() {
   const [quantity, setQuantity] = useState<string>('')
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [notifyDays, setNotifyDays] = useState('')
-  const { currentLocation } = useLocation()
-  const role = currentLocation?.role
   const canManageProduct = role ? permissions.canManageProduct(role) : false
 
   // delete modal states
@@ -122,17 +123,7 @@ export default function ShowDetailPersonal() {
     )
 
     setShowConfirmDelete(false)
-
-    const newQty = (Number(quantity) || 0) - deleteQty
-
-    if (newQty <= 0) {
-      router.back()
-      return
-    }
-
-    setQuantity(newQty.toString())
-
-    showToast('Product deleted successfully')
+    router.back()
   } catch (err) {
     console.log(err)
     Alert.alert('Error', 'Delete failed')
@@ -194,10 +185,10 @@ export default function ShowDetailPersonal() {
               label: s.name,
               value: s.id,
             })),
-            {
+            ...(canManageStorage ? [{
               label: '+ Add New Storage',
               value: '__add_new__',
-            },
+            }] : []),
           ]
 
           setStorageOptions(formatted)

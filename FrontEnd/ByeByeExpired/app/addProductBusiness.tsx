@@ -28,6 +28,7 @@ import { getStoragesByLocation } from '../src/api/storage.api'
 import { supabase } from '../src/supabase'
 import { getSuppliersByLocation } from '@/src/api/supplier.api';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { useLocation } from '../src/context/LocationContext'
 
 
 
@@ -46,6 +47,9 @@ interface DropdownProps {
 
 export default function AddProductScreen() {
   const router = useRouter();
+  const { currentLocation } = useLocation()
+  const role = currentLocation?.role
+  const canManageStorage = role === 'owner'
 
   const {
     barcode,
@@ -121,10 +125,10 @@ export default function AddProductScreen() {
               label: s.company_name,
               value: s.id,
             })),
-            {
+            ...(canManageStorage ? [{
               label: '+ Add Supplier',
               value: '__add_new__',
-            },
+            }] : []),
           ]
 
           setSupplierOptions(formatted)
@@ -157,10 +161,10 @@ export default function AddProductScreen() {
               label: s.name,
               value: s.id,
             })),
-            {
+            ...(canManageStorage ? [{
               label: '+ Add New Storage',
               value: '__add_new__',
-            },
+            }] : []),
           ]
 
           setStorageOptions(formatted)
@@ -283,7 +287,8 @@ export default function AddProductScreen() {
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const handleCancel = () => {
-    router.push('/overview')
+    router.back()
+    router.back()
   }
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -425,7 +430,7 @@ export default function AddProductScreen() {
       })
 
       Alert.alert('Success', 'Product saved successfully 🎉')
-      router.push('/overview')
+      router.back()
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Save failed')
     } finally {

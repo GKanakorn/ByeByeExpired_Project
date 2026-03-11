@@ -1,6 +1,6 @@
 import { Router, Response } from 'express'
 import { requireAuth } from '../middleware/auth.middleware'
-import { createLocation } from '../services/location.service'
+import { createLocation, updateLocation } from '../services/location.service'
 import { deleteLocation } from '../services/location.service'
 import { AuthRequest } from '../types/auth-request'
 import { supabaseAdmin } from '../supabase'
@@ -64,7 +64,7 @@ router.get(
       name: string
       type: string
       owner_id: string
-      role: 'owner' | 'admin' | 'member'
+      role: 'owner' | 'member'
     }> = (memberOf ?? [])
       .map(row => {
         const loc = Array.isArray(row.locations)
@@ -77,7 +77,7 @@ router.get(
           name: loc.name,
           type: loc.type,
           owner_id: loc.owner_id,
-          role: row.role as 'owner' | 'admin' | 'member',
+          role: row.role === 'owner' ? 'owner' : 'member',
         }
       })
       .filter(
@@ -88,7 +88,7 @@ router.get(
           name: string
           type: string
           owner_id: string
-          role: 'owner' | 'admin' | 'member'
+          role: 'owner' | 'member'
         } => item !== null
       )
 
@@ -98,7 +98,7 @@ router.get(
       name: string
       type: string
       owner_id: string
-      role: 'owner' | 'admin' | 'member'
+      role: 'owner' | 'member'
     }>()
 
     ownedWithRole.forEach(loc => map.set(loc.id, loc))
@@ -116,6 +116,24 @@ router.get(
   }
 )
 
+router.put(
+  '/locations/:id',
+  requireAuth,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.id
+      const locationId = req.params.id as string
+
+      const updated = await updateLocation(userId, locationId, req.body)
+
+      res.json(updated)
+    } catch (err: any) {
+      console.error(err)
+      res.status(400).json({ message: err?.message || 'Cannot update location' })
+    }
+  }
+)
+
 router.delete(
   '/locations/:id',
   requireAuth,
@@ -127,9 +145,9 @@ router.delete(
       await deleteLocation(userId, locationId)
 
       res.json({ success: true })
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      res.status(400).json({ message: 'Cannot delete location' })
+      res.status(400).json({ message: err?.message || 'Cannot delete location' })
     }
   }
 )

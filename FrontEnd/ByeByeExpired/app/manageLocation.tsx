@@ -17,18 +17,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import {
     getManageLocation,
-    updateMemberRole,
     deleteMember,
     inviteMemberToLocation,
 } from "../src/api/manageLocation.api";
-import { getMyLocations } from "../src/api/location.api";
+import { getMyLocations, updateLocation } from "../src/api/location.api";
 import { supabase } from "@/src/supabase";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type Member = {
     id: string;
     email: string;
-    role: "owner" | "admin" | "member";
+    role: "owner" | "member";
 };
 
 export default function ManageLocationScreen() {
@@ -48,6 +47,10 @@ export default function ManageLocationScreen() {
     const [inviteVisible, setInviteVisible] = useState(false);
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviteRole, setInviteRole] = useState<Member["role"]>("member");
+
+    const [editNameVisible, setEditNameVisible] = useState(false);
+    const [editNameText, setEditNameText] = useState("");
+    const [updatingName, setUpdatingName] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -89,28 +92,6 @@ export default function ManageLocationScreen() {
     };
 
     const isOwner = currentUserId === ownerId;
-
-    const changeRole = async (memberId: string, newRole: Member["role"]) => {
-        try {
-            setUpdatingId(memberId);
-
-            const { data: session } = await supabase.auth.getSession();
-            const token = session?.session?.access_token;
-            if (!token) return;
-
-            await updateMemberRole(token, locationId, memberId, newRole);
-
-            setMembers((prev) =>
-                prev.map((m) =>
-                    m.id === memberId ? { ...m, role: newRole } : m
-                )
-            );
-        } catch {
-            Alert.alert("Error", "Failed to change role");
-        } finally {
-            setUpdatingId(null);
-        }
-    };
 
     const removeMember = async (memberId: string) => {
         Alert.alert("Confirm", "Do you want to remove this member?", [
@@ -171,10 +152,37 @@ export default function ManageLocationScreen() {
         }
     };
 
+    const handleUpdateName = async () => {
+        if (!editNameText.trim()) {
+            Alert.alert("Error", "Location name cannot be empty");
+            return;
+        }
+
+        try {
+            setUpdatingName(true);
+            const { data: session } = await supabase.auth.getSession();
+            const token = session?.session?.access_token;
+
+            if (!token) {
+                Alert.alert("Error", "Token not found");
+                return;
+            }
+
+            await updateLocation(token, locationId, { name: editNameText.trim() });
+            setLocationName(editNameText.trim());
+            setEditNameVisible(false);
+            setEditNameText("");
+            Alert.alert("Success", "Location name updated");
+        } catch (err: any) {
+            Alert.alert("Error", err.message || "Failed to update location name");
+        } finally {
+            setUpdatingName(false);
+        }
+    };
+
     const renderRoleBadge = (role: Member["role"]) => {
         const map = {
             owner: { bg: "#FFC107", label: "Owner" },
-            admin: { bg: "#6C63FF", label: "Admin" },
             member: { bg: "#00B894", label: "Member" },
         };
 
@@ -197,47 +205,7 @@ export default function ManageLocationScreen() {
                             <Text style={{ marginLeft: 6 }}>👑</Text>
                         )}
                     </View>
-                    {isOwner && item.id !== ownerId ? (
-                        <TouchableOpacity
-                            onPress={() => {
-                                const newRole = item.role === "admin" ? "member" : "admin";
-
-                                Alert.alert(
-                                    "Confirm Role Change",
-                                    `Change role to ${newRole.toUpperCase()} for ${item.email}?`,
-                                    [
-                                        { text: "Cancel", style: "cancel" },
-                                        {
-                                            text: "Confirm",
-                                            onPress: () => changeRole(item.id, newRole),
-                                        },
-                                    ]
-                                );
-                            }}
-                            style={[
-                                styles.roleBadge,
-                                item.role === "admin"
-                                    ? { backgroundColor: "#6C63FF" }
-                                    : { backgroundColor: "#00B894" },
-                            ]}
-                        >
-                            <View style={{ flexDirection: "row", alignItems: "center" }}>
-                                <Text style={styles.roleText}>
-                                    {item.role === "admin" ? "Admin" : "Member"}
-                                </Text>
-                                {canEdit && (
-                                    <Ionicons
-                                        name="swap-horizontal"
-                                        size={12}
-                                        color="#FFF"
-                                        style={{ marginLeft: 4 }}
-                                    />
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                    ) : (
-                        renderRoleBadge(item.role)
-                    )}
+                    {renderRoleBadge(item.role)}
                 </View>
 
                 {canEdit && (
@@ -284,7 +252,20 @@ export default function ManageLocationScreen() {
                           />
                         </View>
                     )}
-                    <Text style={styles.title}>{locationName}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                        <Text style={styles.title}>{locationName}</Text>
+                        {isOwner && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setEditNameText(locationName);
+                                    setEditNameVisible(true);
+                                }}
+                                style={{ marginLeft: 10 }}
+                            >
+                                <Ionicons name="pencil" size={20} color="#5A6AE0" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                     <Text style={styles.subtitle}>Manage members in this location</Text>
                     {isOwner && (
                         <TouchableOpacity
@@ -329,27 +310,10 @@ export default function ManageLocationScreen() {
                             />
 
                             <Text style={{ fontWeight: "600", marginBottom: 8 }}>
-                                Select Role
+                                Role
                             </Text>
 
                             <View style={styles.roleButtonRow}>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.roleButton,
-                                        inviteRole === "admin" && styles.roleButtonActive,
-                                    ]}
-                                    onPress={() => setInviteRole("admin")}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.roleButtonText,
-                                            inviteRole === "admin" && styles.roleButtonTextActive,
-                                        ]}
-                                    >
-                                        ADMIN
-                                    </Text>
-                                </TouchableOpacity>
-
                                 <TouchableOpacity
                                     style={[
                                         styles.roleButton,
@@ -383,6 +347,42 @@ export default function ManageLocationScreen() {
                     </View>
                 </Modal>
 
+                <Modal visible={editNameVisible} transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalBox}>
+                            <Text style={styles.modalTitle}>Edit Location Name</Text>
+
+                            <TextInput
+                                placeholder="Enter new location name"
+                                value={editNameText}
+                                onChangeText={setEditNameText}
+                                style={styles.input}
+                                editable={!updatingName}
+                            />
+
+                            <View style={styles.modalRow}>
+                                <TouchableOpacity 
+                                    onPress={() => {
+                                        setEditNameVisible(false);
+                                        setEditNameText("");
+                                    }}
+                                    disabled={updatingName}
+                                >
+                                    <Text style={{ color: updatingName ? "#ccc" : "#999" }}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    onPress={handleUpdateName}
+                                    disabled={updatingName}
+                                >
+                                    <Text style={{ color: updatingName ? "#ccc" : "#6C63FF", fontWeight: "600" }}>
+                                        {updatingName ? "Updating..." : "Update"}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
 
 
             </SafeAreaView>

@@ -20,7 +20,7 @@ import { supabaseAdmin } from '../supabase'
 const router = Router()
 
 
-router.post('/', requireAuth, requireLocationRole(["owner", "admin"]), async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, requireLocationRole(["owner", "member"]), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
     const result = await createProduct(userId, req.body)
@@ -161,7 +161,7 @@ router.get('/by-barcode/:barcode', requireAuth, async (req: AuthRequest, res: Re
     })
   }
 })
-router.patch('/:id/delete', requireAuth, requireLocationRole(["owner", "admin"]), async (req: AuthRequest, res: Response) => {
+router.patch('/:id/delete', requireAuth, requireLocationRole(["owner", "member"]), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
     const productId = req.params.id as string
@@ -236,7 +236,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 })
 
 // ✅ UPDATE PRODUCT
-router.put('/:id', requireAuth, requireLocationRole(["owner", "admin"]), async (req: AuthRequest, res: Response) => {
+router.put('/:id', requireAuth, requireLocationRole(["owner", "member"]), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
     const productId = req.params.id as string
@@ -253,7 +253,7 @@ router.put('/:id', requireAuth, requireLocationRole(["owner", "admin"]), async (
 })
 
 // ✅ DELETE PRODUCT
-router.delete('/:id', requireAuth, requireLocationRole(["owner", "admin"]), async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, requireLocationRole(["owner", "member"]), async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id
     const productId = req.params.id as string
@@ -279,7 +279,7 @@ router.get(
       // 1️⃣ Get locations owned by user
       const { data: ownedLocations } = await supabaseAdmin
         .from('locations')
-        .select('id')
+        .select('id, name')
         .eq('owner_id', userId)
 
       // 2️⃣ Get locations where user is a member
@@ -294,11 +294,25 @@ router.get(
         ...(memberLocations?.map((m) => m.location_id) || []),
       ]
 
+      const uniqueAccessibleLocationIds = [...new Set(accessibleLocationIds)]
+
+      if (uniqueAccessibleLocationIds.length === 0) {
+        return res.json([])
+      }
+
+      // 3.1️⃣ Fetch location names for mapping
+      const { data: accessibleLocations } = await supabaseAdmin
+        .from('locations')
+        .select('id, name')
+        .in('id', uniqueAccessibleLocationIds)
+
+      const locationMap = new Map(accessibleLocations?.map((loc) => [loc.id, loc.name]) || [])
+
       // 4️⃣ Get deleted history from all accessible locations
       const { data: historyData, error } = await supabaseAdmin
         .from('product_delete_history')
         .select('*')
-        .in('location_id', accessibleLocationIds)
+        .in('location_id', uniqueAccessibleLocationIds)
         .order('deleted_at', { ascending: false })
 
       if (error) throw error
@@ -321,7 +335,8 @@ router.get(
       
       const enrichedData = historyData.map(item => ({
         ...item,
-        deleted_by_profile: profileMap.get(item.deleted_by) || null
+        deleted_by_profile: profileMap.get(item.deleted_by) || null,
+        location_name: locationMap.get(item.location_id) || 'Unknown Location',
       }))
 
       res.json(enrichedData)

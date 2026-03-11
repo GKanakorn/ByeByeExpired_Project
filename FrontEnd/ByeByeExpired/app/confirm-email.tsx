@@ -7,12 +7,18 @@ import {
   StyleSheet,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native'
 import { supabase } from '../src/supabase'
 import { confirmAndCreateProfile } from '../src/api/auth.api'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useRef, useState, useEffect } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { Ionicons } from '@expo/vector-icons'
 
 export default function ConfirmEmailScreen() {
   const { email } = useLocalSearchParams<{ email: string }>()
@@ -27,9 +33,10 @@ export default function ConfirmEmailScreen() {
 
   const inputs = useRef<(TextInput | null)[]>([])
 
+
   useEffect(() => {
     if (!normalizedEmail) {
-      Alert.alert('Error', 'ไม่พบอีเมลจากการสมัคร')
+      Alert.alert('Error', 'Email not found from registration')
       router.replace('/Register')
     }
   }, [normalizedEmail])
@@ -101,7 +108,7 @@ export default function ConfirmEmailScreen() {
     
     if (error) {
       setLoading(false)
-      Alert.alert('Error', 'OTP ไม่ถูกต้องหรือหมดอายุ')
+      Alert.alert('Error', 'Invalid or expired OTP')
       return
     }
 
@@ -109,7 +116,7 @@ export default function ConfirmEmailScreen() {
       // ✅ Get user info from session
       const user = data.user
       if (!user) {
-        throw new Error('ไม่พบ user หลัง verify OTP')
+        throw new Error('User not found after OTP verification')
       }
 
       console.log('[OTP VERIFIED] UID:', user.id)
@@ -142,7 +149,7 @@ export default function ConfirmEmailScreen() {
     } catch (err: any) {
       setLoading(false)
       console.error('Error creating profile:', err)
-      Alert.alert('Error', err.message || 'ล้มเหลวในการสร้าง profile')
+      Alert.alert('Error', err.message || 'Failed to create profile')
     }
   }
 
@@ -164,7 +171,7 @@ export default function ConfirmEmailScreen() {
         throw error
       }
 
-      Alert.alert('สำเร็จ', 'ส่ง OTP ใหม่แล้ว กรุณาตรวจอีเมล')
+      Alert.alert('Success', 'OTP resent. Please check your email')
       setCooldown(30)
       const timer = setInterval(() => {
         setCooldown((c) => {
@@ -176,19 +183,31 @@ export default function ConfirmEmailScreen() {
         })
       }, 1000)
     } catch (err: any) {
-      Alert.alert('ส่ง OTP ไม่สำเร็จ', err?.message || 'กรุณาลองใหม่อีกครั้ง')
+      Alert.alert('Failed to resend OTP', err?.message || 'Please try again')
     } finally {
       setResending(false)
     }
   }
 
   return (
-    <View style={styles.container}>
-        <View style={styles.card}>
-        <Text style={styles.title}>ยืนยันอีเมล</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={28} color="#6a367a" />
+          </TouchableOpacity>
+          <View style={styles.card}>
+            <Text style={styles.title}>Confirm Email</Text>
 
         <Text style={styles.emailText}>
-          ส่งรหัสไปที่ {normalizedEmail && maskEmail(normalizedEmail)}
+          Code sent to {normalizedEmail && maskEmail(normalizedEmail)}
         </Text>
 
         <View style={styles.otpRow}>
@@ -216,18 +235,20 @@ export default function ConfirmEmailScreen() {
 
         <TouchableOpacity disabled={loading} style={styles.verifyButton}>
             <Text style={styles.verifyText}>
-            {loading ? 'กำลังตรวจสอบ...' : 'ยืนยัน OTP'}
+            {loading ? 'Verifying...' : 'Verify OTP'}
             </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity disabled={cooldown > 0 || resending} onPress={handleResend}>
-            <Text style={styles.resendText}>
-          {resending ? 'กำลังส่ง...' : cooldown > 0 ? `ส่งใหม่ใน ${cooldown}s` : 'ส่ง OTP อีกครั้ง'}
-            </Text>
-        </TouchableOpacity>
-        </View>
-    </View>
-    )
+            <TouchableOpacity disabled={cooldown > 0 || resending} onPress={handleResend}>
+              <Text style={styles.resendText}>
+                {resending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
+  )
 }
 
 const PRIMARY = '#6a367a'
@@ -236,8 +257,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f6f2f8',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    padding: 8,
   },
   card: {
     backgroundColor: '#fff',

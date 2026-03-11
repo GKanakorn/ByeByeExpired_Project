@@ -39,17 +39,86 @@ export async function getStoragesByLocation(locationId: string) {
 
 export async function deleteStorage(
   userId: string,
-  storageId: string
+  storageId: string,
+  targetStorageId?: string
 ) {
-  // 1. ลบ products ก่อน (กัน FK error ถ้าไม่ได้ตั้ง cascade)
-  const { error: productError } = await supabaseAdmin
+  const { data: sourceStorage, error: sourceStorageError } = await supabaseAdmin
+    .from('storages')
+    .select('id, location_id, name')
+    .eq('id', storageId)
+    .single()
+
+  if (sourceStorageError || !sourceStorage) throw sourceStorageError || new Error('Storage not found')
+
+  const { count: productCount, error: countError } = await supabaseAdmin
     .from('products')
-    .delete()
+    .select('id', { count: 'exact', head: true })
     .eq('storage_id', storageId)
 
-  if (productError) throw productError
+  if (countError) throw countError
 
-  // 2. ลบ storage
+  let destinationStorageId = targetStorageId
+
+  if ((productCount ?? 0) > 0) {
+    if (!destinationStorageId || destinationStorageId === '__NO_STORAGE__') {
+      const { data: existingNoStorage, error: existingNoStorageError } = await supabaseAdmin
+        .from('storages')
+        .select('id')
+        .eq('location_id', sourceStorage.location_id)
+        .ilike('name', 'no storage')
+        .limit(1)
+
+      if (existingNoStorageError) throw existingNoStorageError
+
+      if (existingNoStorage && existingNoStorage.length > 0) {
+        destinationStorageId = existingNoStorage[0].id
+      } else {
+        const { data: createdNoStorage, error: createNoStorageError } = await supabaseAdmin
+          .from('storages')
+          .insert({
+            location_id: sourceStorage.location_id,
+            name: 'No Storage',
+            icon: 'default',
+            color: '#FFFFFF',
+          })
+          .select('id')
+          .single()
+
+        if (createNoStorageError || !createdNoStorage) {
+          throw createNoStorageError || new Error('Failed to create No Storage')
+        }
+
+        destinationStorageId = createdNoStorage.id
+      }
+    }
+
+    if (destinationStorageId === storageId) {
+      throw new Error('Target storage must be different from source storage')
+    }
+
+    const { data: destinationStorage, error: destinationStorageError } = await supabaseAdmin
+      .from('storages')
+      .select('id, location_id')
+      .eq('id', destinationStorageId)
+      .single()
+
+    if (destinationStorageError || !destinationStorage) {
+      throw destinationStorageError || new Error('Target storage not found')
+    }
+
+    if (destinationStorage.location_id !== sourceStorage.location_id) {
+      throw new Error('Target storage must be in the same location')
+    }
+
+    const { error: moveProductsError } = await supabaseAdmin
+      .from('products')
+      .update({ storage_id: destinationStorageId })
+      .eq('storage_id', storageId)
+
+    if (moveProductsError) throw moveProductsError
+  }
+
+  // 2. ลบ storage หลังจากย้ายสินค้าแล้ว
   const { error } = await supabaseAdmin
     .from('storages')
     .delete()
@@ -57,7 +126,11 @@ export async function deleteStorage(
 
   if (error) throw error
 
-  return { success: true }
+  return {
+    success: true,
+    movedProducts: productCount ?? 0,
+    targetStorageId: destinationStorageId ?? null,
+  }
 }
 
 export async function updateStorage(

@@ -5,7 +5,7 @@ export type Location = {
   name: string
   type: "personal" | "business"
   owner_id: string
-  role: "owner" | "admin" | "member";
+  role: "owner" | "member";
 }
 
 export async function createLocation(token: string, data: {
@@ -41,6 +41,26 @@ export async function deleteLocation(token: string, locationId: string) {
   if (!res.ok) {
     const err = await res.json()
     throw new Error(err.message || 'Delete location failed')
+  }
+
+  return res.json()
+}
+
+export async function updateLocation(token: string, locationId: string, data: {
+  name?: string
+}) {
+  const res = await fetch(`${API_URL}/api/locations/${locationId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.message || 'Update location failed')
   }
 
   return res.json()

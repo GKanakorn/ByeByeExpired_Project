@@ -27,6 +27,7 @@ import { Image } from 'react-native'
 import { supabase } from '../src/supabase'
 import { getStoragesByLocation } from '../src/api/storage.api'
 import * as ImageManipulator from 'expo-image-manipulator'
+import { useLocation } from '../src/context/LocationContext'
 
 interface Option {
   label: string;
@@ -43,6 +44,9 @@ interface DropdownProps {
 
 export default function AddProductScreen() {
   const router = useRouter();
+  const { currentLocation } = useLocation()
+  const role = currentLocation?.role
+  const canManageStorage = role === 'owner'
 
   const {
     barcode,
@@ -109,10 +113,10 @@ export default function AddProductScreen() {
               label: s.name,
               value: s.id,
             })),
-            {
+            ...(canManageStorage ? [{
               label: '+ Add New Storage',
               value: '__add_new__',
-            },
+            }] : []),
           ]
 
           setStorageOptions(formatted)

@@ -49,6 +49,7 @@ export default function showDetailBusiness() {
   const { currentLocation } = useLocation()
   const role = currentLocation?.role
   const canManageProduct = role ? permissions.canManageProduct(role) : false
+  const canManageStorage = role === 'owner'
 
   const {
     productId,
@@ -107,19 +108,8 @@ export default function showDetailBusiness() {
 
     try {
       await deleteProductQuantity(productId as string, deleteQty)
-
-      const newQty = (Number(quantity) || 0) - deleteQty
-
       setShowConfirmDelete(false)
-
-      if (newQty <= 0) {
-        router.back()
-        return
-      }
-
-      setQuantity(newQty.toString())
-
-      showToast('Product deleted successfully')
+      router.back()
 
     } catch (err) {
       Alert.alert('Error', 'Delete failed')
@@ -285,10 +275,10 @@ export default function showDetailBusiness() {
               label: s.company_name,
               value: s.id,
             })),
-            {
+            ...(canManageStorage ? [{
               label: '+ Add Supplier',
               value: '__add_new__',
-            },
+            }] : []),
           ]
 
           setSupplierOptions(formatted)
@@ -321,10 +311,10 @@ export default function showDetailBusiness() {
               label: s.name,
               value: s.id,
             })),
-            {
+            ...(canManageStorage ? [{
               label: '+ Add New Storage',
               value: '__add_new__',
-            },
+            }] : []),
           ]
 
           setStorageOptions(formatted)
@@ -1214,7 +1204,7 @@ const styles = StyleSheet.create({
 },
 
 confirmBox: {
-  width: '80%',
+  width: '90%',
   backgroundColor: '#fff',
   borderRadius: 20,
   padding: 25,

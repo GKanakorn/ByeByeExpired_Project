@@ -40,8 +40,8 @@ export default function AddLocationScreen() {
     try {
       await createLocation(session.access_token, { name, type })
 
-      Alert.alert('สำเร็จ', 'เพิ่มสถานที่เรียบร้อยแล้ว', [
-        { text: 'ตกลง', onPress: () => router.back() },
+      Alert.alert('Success', 'Location added successfully', [
+        { text: 'OK', onPress: () => router.back() },
       ])
     } catch (err: any) {
       Alert.alert('Error', err.message)
@@ -60,7 +60,7 @@ export default function AddLocationScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={26} color="#4b2a86" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>เพิ่มสถานที่เก็บใหม่</Text>
+        <Text style={styles.headerTitle}>Add New Location</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -69,19 +69,19 @@ export default function AddLocationScreen() {
         <View style={styles.iconCircle}>
           <Ionicons name="location" size={50} color="#7b3fe4" />
         </View>
-        <Text style={styles.bigTitle}>เพิ่มสถานที่เก็บ</Text>
+        <Text style={styles.bigTitle}>Add Location</Text>
         <Text style={styles.subTitle}>
-          จัดการสินค้าได้อย่างมีประสิทธิภาพ
+          Manage products efficiently
         </Text>
       </View>
 
       {/* Name Card */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionLabel}>• ชื่อสถานที่</Text>
+        <Text style={styles.sectionLabel}>• Location Name</Text>
         <TextInput
           value={name}
           onChangeText={setName}
-          placeholder="ระบุชื่อสถานที่เก็บของคุณ"
+          placeholder="Specify your storage location name"
           placeholderTextColor="#aaa"
           style={styles.input}
         />
@@ -89,7 +89,7 @@ export default function AddLocationScreen() {
 
       {/* Type Card */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionLabel}>• ประเภทสถานที่</Text>
+        <Text style={styles.sectionLabel}>• Location Type</Text>
 
         <View style={styles.typeRow}>
           <TouchableOpacity
@@ -103,7 +103,7 @@ export default function AddLocationScreen() {
               source={require('../assets/images/home.png')}
               style={styles.typeImage}
             />
-            <Text style={styles.typeText}>ส่วนตัว</Text>
+            <Text style={styles.typeText}>Personal</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -117,7 +117,7 @@ export default function AddLocationScreen() {
               source={require('../assets/images/business.png')}
               style={styles.typeImage}
             />
-            <Text style={styles.typeText}>ธุรกิจ</Text>
+            <Text style={styles.typeText}>Business</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -135,7 +135,7 @@ export default function AddLocationScreen() {
           style={styles.saveButton}
         >
           <Text style={styles.saveText}>
-            {loading ? 'กำลังบันทึก...' : '+ เพิ่มสถานที่เก็บ'}
+            {loading ? 'Saving...' : '+ Add Location'}
           </Text>
         </LinearGradient>
       </TouchableOpacity>

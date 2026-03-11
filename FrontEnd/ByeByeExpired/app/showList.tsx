@@ -21,7 +21,7 @@ interface Product {
   price: number;
 }
 
-const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function ShowListScreen() {
   const router = useRouter();
@@ -94,7 +94,7 @@ export default function ShowListScreen() {
     <View style={styles.productRow}>
       <Text style={styles.productNumber}>{index + 1}. </Text>
       <Text style={styles.productName}>{item.name}</Text>
-      <Text style={styles.productPrice}>{item.quantity * item.price} บาท</Text>
+      <Text style={styles.productPrice}>{item.quantity * item.price} Baht</Text>
     </View>
   );
 
@@ -106,9 +106,9 @@ export default function ShowListScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={styles.title}>วัตถุดิบที่หมดอายุ</Text>
+            <Text style={styles.title}>Expired Products</Text>
             <Text style={styles.subtitle}>
-              {filterTypeParam === 'year' ? '1 ปี' : `เดือน ${months[monthIndexParam]}`}
+              {filterTypeParam === 'year' ? '1 Year' : months[monthIndexParam]}
             </Text>
           </View>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
@@ -119,7 +119,7 @@ export default function ShowListScreen() {
         {/* Product List Card */}
         <View style={styles.card}>
           {!isBusiness && (
-            <Text style={styles.emptyText}>หน้านี้แสดงเฉพาะ Business location</Text>
+            <Text style={styles.emptyText}>This page is only for Business locations</Text>
           )}
           <FlatList
             data={products}
@@ -127,7 +127,7 @@ export default function ShowListScreen() {
             keyExtractor={(item) => item.id}
             scrollEnabled={false}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>ไม่มีสินค้าที่หมดอายุ</Text>
+              <Text style={styles.emptyText}>No expired products</Text>
             }
           />
 
@@ -135,8 +135,8 @@ export default function ShowListScreen() {
           <View style={styles.totalContainer}>
             <View style={styles.divider} />
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>รวม</Text>
-              <Text style={styles.totalPrice}>{total} บาท</Text>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalPrice}>{total} Baht</Text>
             </View>
           </View>
         </View>

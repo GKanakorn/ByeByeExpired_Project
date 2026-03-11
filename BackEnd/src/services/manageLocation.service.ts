@@ -51,9 +51,14 @@ export async function updateMemberRoleService(
   memberId: string,
   role: string
 ) {
+  const normalizedRole = role?.toLowerCase()
+  if (normalizedRole !== 'member') {
+    throw new Error('Invalid role. Must be member')
+  }
+
   const { error } = await supabaseAdmin
     .from("location_members")
-    .update({ role })
+    .update({ role: normalizedRole })
     .eq("location_id", locationId)
     .eq("user_id", memberId);
 
@@ -89,8 +94,8 @@ export async function inviteMemberService(
   const normalizedRole = role?.toLowerCase()
   const normalizedEmail = email?.toLowerCase().trim()
   
-  if (!['owner', 'admin', 'member'].includes(normalizedRole)) {
-    throw new Error('Invalid role. Must be owner, admin, or member')
+  if (normalizedRole !== 'member') {
+    throw new Error('Invalid role. Must be member')
   }
 
   // 1️⃣ หา location

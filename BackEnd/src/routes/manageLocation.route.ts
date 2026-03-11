@@ -1,4 +1,7 @@
 import express from "express";
+import { requireAuth } from "../middleware/auth.middleware";
+import { requireLocationRole } from "../middleware/locationRole.middleware";
+import { AuthRequest } from "../types/auth-request";
 import {
   getLocationMembers,
   updateMemberRoleService,
@@ -8,9 +11,9 @@ import {
 
 const router = express.Router();
 
-router.get("/locations/:locationId/members", async (req, res) => {
+router.get("/locations/:locationId/members", requireAuth, requireLocationRole(["owner", "member"]), async (req: AuthRequest, res) => {
   try {
-    const { locationId } = req.params;
+    const locationId = req.params.locationId as string;
 
     const members = await getLocationMembers(locationId);
 
@@ -25,10 +28,13 @@ router.get("/locations/:locationId/members", async (req, res) => {
 
 router.put(
   "/locations/:locationId/members/:memberId",
-  async (req, res) => {
+  requireAuth,
+  requireLocationRole(["owner"]),
+  async (req: AuthRequest, res) => {
     try {
-      const { locationId, memberId } = req.params;
-      const { role } = req.body;
+      const locationId = req.params.locationId as string;
+      const memberId = req.params.memberId as string;
+      const role = req.body.role as string;
       await updateMemberRoleService(locationId, memberId, role);
       res.status(200).json({ message: "Role updated" });
     } catch (error) {
@@ -39,9 +45,12 @@ router.put(
 
 router.delete(
   "/locations/:locationId/members/:memberId",
-  async (req, res) => {
+  requireAuth,
+  requireLocationRole(["owner"]),
+  async (req: AuthRequest, res) => {
     try {
-      const { locationId, memberId } = req.params;
+      const locationId = req.params.locationId as string;
+      const memberId = req.params.memberId as string;
       await deleteMemberService(locationId, memberId);
       res.status(200).json({ message: "Member deleted" });
     } catch (error) {
@@ -52,10 +61,13 @@ router.delete(
 
 router.post(
   "/locations/:locationId/members",
-  async (req, res) => {
+  requireAuth,
+  requireLocationRole(["owner"]),
+  async (req: AuthRequest, res) => {
     try {
-      const { locationId } = req.params;
-      const { email, role } = req.body;
+      const locationId = req.params.locationId as string;
+      const email = req.body.email as string;
+      const role = req.body.role as string;
       await inviteMemberService(locationId, email, role);
       res.status(201).json({ message: "Member added successfully" });
     } catch (error: any) {
