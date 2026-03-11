@@ -206,6 +206,16 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
             setIsSearching(false)
         }
     }
+
+    // SORT nearly expired (ใกล้หมดก่อน)
+    const sortedNearlyExpired = [...nearlyExpired].sort(
+        (a, b) => new Date(a.expiration_date).getTime() - new Date(b.expiration_date).getTime()
+    )
+
+    // SORT expired (หมดนานก่อน)
+    const sortedExpired = [...expired].sort(
+        (a, b) => new Date(a.expiration_date).getTime() - new Date(b.expiration_date).getTime()
+    )
     return (
         <View style={{ flex: 1, backgroundColor: "#F8F7FB" }}>
             {/* Scroll Content */}
@@ -341,7 +351,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                                 </Text>
                             </View>
                         ) : (
-                            nearlyExpired.map((item) => {
+                            sortedNearlyExpired.map((item) => {
                                 const formatted = new Date(item.expiration_date)
                                     .toLocaleDateString("en-GB", {
                                         day: "2-digit",
@@ -412,7 +422,7 @@ export default function PersonalOverview({ location, notificationCount = 0 }: { 
                                 </Text>
                             </View>
                         ) : (
-                            expired.map((item) => {
+                            sortedExpired.map((item) => {
                                 const formatted = new Date(item.expiration_date)
                                     .toLocaleDateString("en-GB", {
                                         day: "2-digit",
@@ -779,17 +789,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     badge: {
-        position: 'absolute',
-        top: -10,
-        right: -10,
-        backgroundColor: '#FF3B30',
-        minWidth: 20,
-        height: 20,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 5,
-        borderWidth: 2,
+        position: "absolute",
+        top: -12,
+        right: -15,
+        backgroundColor: "#ff3b30",
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 4,
         borderColor: '#FFF',
         shadowColor: '#000',
         shadowOpacity: 0.3,
