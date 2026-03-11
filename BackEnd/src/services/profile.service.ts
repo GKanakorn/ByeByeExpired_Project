@@ -28,10 +28,40 @@ export async function updateProfile(
 }
 
 export async function getProfileStats(userId: string) {
+  // Include locations the user owns + locations the user joined as member.
+  const { data: ownedLocations, error: ownedError } = await supabaseAdmin
+    .from('locations')
+    .select('id')
+    .eq('owner_id', userId)
+
+  if (ownedError) throw ownedError
+
+  const { data: membershipRows, error: membershipError } = await supabaseAdmin
+    .from('location_members')
+    .select('location_id')
+    .eq('user_id', userId)
+
+  if (membershipError) throw membershipError
+
+  const accessibleLocationIds = [
+    ...(ownedLocations?.map((row: any) => row.id) || []),
+    ...(membershipRows?.map((row: any) => row.location_id) || []),
+  ]
+
+  const uniqueLocationIds = [...new Set(accessibleLocationIds)]
+
+  if (uniqueLocationIds.length === 0) {
+    return {
+      total: 0,
+      near: 0,
+      expired: 0,
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from('products')
     .select('expiration_date')
-    .eq('owner_id', userId)
+    .in('location_id', uniqueLocationIds)
 
   if (error) throw error
 

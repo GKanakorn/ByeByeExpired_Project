@@ -379,7 +379,7 @@ export default function ProfilePage() {
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{nearExpireItems}</Text>
-                <Text style={styles.statLabel}>Near Expiry</Text>
+                <Text style={styles.statLabel}>Nearly Expired</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
