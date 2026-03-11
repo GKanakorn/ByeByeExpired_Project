@@ -601,7 +601,7 @@ export default function BusinessOverview({ location, notificationCount = 0 }: { 
                     { backgroundColor: iconConfig.color },
                   ]}
                 >
-                  <Text style={{ color: "white", fontSize: 12 }}>
+                  <Text style={{ color: "white", fontSize: 12, textAlign: "center", }}>
                     {item.item_count ?? 0}
                   </Text>
                 </View>
@@ -993,7 +993,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,   // ต้อง = width/2
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
   },
   addStorage: {
     alignItems: "center",
