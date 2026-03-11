@@ -944,7 +944,6 @@ const styles = StyleSheet.create({
         borderRadius: 12,   // ต้อง = width/2
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 8,
     },
     addStorage: {
         alignItems: "center",
