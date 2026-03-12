@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 150,
   },
   logoSection: {
     alignItems: 'center',
