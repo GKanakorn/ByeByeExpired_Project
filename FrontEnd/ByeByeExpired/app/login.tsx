@@ -175,10 +175,11 @@ export default function LoginScreen() {
             {/* Scrollable Area - เฉพาะส่วนนี้เลื่อนเมื่อ keyboard ขึ้น */}
             <ScrollView
               ref={scrollRef}
-              scrollEnabled={false}
+              scrollEnabled
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               automaticallyAdjustKeyboardInsets={true}
+              contentContainerStyle={{ paddingBottom: 80 }}
             >
               {/* Email */}
               <Text style={styles.label}>Email address</Text>
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     alignItems: "center",
     padding: 20,
-    paddingBottom: 80,
+    paddingBottom: 20,
   },
   spacer: {
     flex: 0.5,
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 20,
     alignItems: "center",
-    marginTop: 30,
+    marginTop: 60,
     marginHorizontal: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   footerText: {
-    marginTop: 15,
+    marginTop: 45,
     textAlign: "center",
     color: "#6a367a",
   },
