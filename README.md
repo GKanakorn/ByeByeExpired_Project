@@ -790,23 +790,14 @@ This project is licensed under the ISC License.
 
 ## 👥 Team
 
-| Role | Name |
-|------|------|
-| **Developer** | GKanakorn |
+| Role         | Name                |
+|--------------|---------------------|
+| **Developer**| GKanakorn           |
+| **Developer**| Peeraphat492        |
+| **Developer**| mmommypoko          |
+| **Developer**| Ornalin26           |
+| **Developer**| nuengruthaiboonmak  |
 
----
-| **Developer** | Peeraphat492 |
-
----
-| **Developer** | mmommypoko |
-
----
-| **Developer** | Ornalin26 |
-
----
-| **Developer** | nuengruthaiboonmak |
-
----
 
 ## 📞 Contact & Support
 
