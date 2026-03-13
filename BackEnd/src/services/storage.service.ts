@@ -79,7 +79,7 @@ export async function deleteStorage(
             location_id: sourceStorage.location_id,
             name: 'No Storage',
             icon: 'default',
-            color: '#FFFFFF',
+            color: '#808080',
           })
           .select('id')
           .single()
