@@ -285,7 +285,7 @@ export default function ProfilePage() {
 
   return (
     <LinearGradient
-      colors={['#BFEFFF', '#E8D5FF', '#F5D0FE']}
+      colors={['#D9F5FF', '#F0E8FF', '#FAE8FF']}
       locations={[0, 0.5, 1]}
       style={styles.container}
     >
